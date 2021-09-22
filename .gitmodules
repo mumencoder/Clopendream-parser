@@ -1,0 +1,4 @@
+[submodule "OpenDream"]
+	path = OpenDream
+	url = https://github.com/mumencoder/OpenDream
+	branch = Dev
