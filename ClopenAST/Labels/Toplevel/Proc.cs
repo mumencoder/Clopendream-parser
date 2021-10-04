@@ -1,7 +1,7 @@
 ﻿
 using System.Linq;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public partial class LabelContext {
         bool CheckProc(Node node) {

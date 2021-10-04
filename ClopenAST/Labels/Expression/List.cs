@@ -1,5 +1,5 @@
 ﻿
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class LabelContext {
         bool CheckListExpression(Node node) {
             if (!node.CheckTag("bare", "list")) { return false; }

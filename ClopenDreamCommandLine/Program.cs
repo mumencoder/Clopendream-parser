@@ -7,129 +7,113 @@ using System.CommandLine.Invocation;
 using OpenDreamShared.Compiler;
 using OpenDreamShared.Compiler.DMPreprocessor;
 using OpenDreamShared.Compiler.DM;
-using DMCompiler.DM.Visitors;
+using Newtonsoft.Json;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     class Program {
 
-        static DirectoryInfo arg_working_dir = null;
         static int Main(string[] args) {
-            var rootCommand = new RootCommand {
-                new Argument<FileInfo>("codetree", "Input code tree"),
-                new Argument<FileInfo>("original", "Original DM file"),
-                new Argument<DirectoryInfo>("working_dir", "Working directory for output")
+            var rootCommand = new RootCommand();
+            rootCommand.Description = "ClopenDream";
+
+            var command = new Command("parse") {
+                new Argument<FileInfo>("byond_codetree", "Input code tree"),
+                new Argument<FileInfo>("dm_original", "Original DM file"),
+                new Argument<DirectoryInfo>("working_dir", "Working directory for output"),
+                new Argument<FileInfo>("json_file", "AST JSON output"),
+                new Option<string>("--mode", getDefaultValue: () => "clopen")
+            }; 
+            command.Description = "Parse a DM file";
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo, FileInfo, string>(ClopenParseHandler);
+            rootCommand.AddCommand(command);
+
+            command = new Command("compare") {
+                new Argument<FileInfo>("ast_r_file", "AST #1"),
+                new Argument<FileInfo>("ast_l_file", "AST #2"),
             };
-            rootCommand.Description = "Clopendream";
-            rootCommand.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>((codetree, original, working_dir) =>
-            {
-                arg_working_dir = working_dir;
-                Parser p = new();
+            command.Description = "Compare two AST files";
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo>(ClopenCompareHandler);
+            rootCommand.AddCommand(command);
 
-                FileInfo empty_dm_file = new FileInfo( Path.Combine(working_dir.FullName, "empty.dm") );
-                FileInfo empty_code_tree = new FileInfo( Path.Combine(working_dir.FullName, "empty-code-tree.txt") );
-
-                Node empty_root = p.BeginParse(empty_code_tree.OpenText(), original.Directory.FullName);
-                empty_root.FixLabels();
-
-                Node root = p.BeginParse(codetree.OpenText(), original.Directory.FullName);
-                root.FixLabels();
-
-                DMPreprocessor dmpp = DMCompiler.Program.Preprocess( new List<string> { original.FullName } );
-                DMLexer dmLexer = new DMLexer(null, dmpp.GetResult());
-                DMParser dmParser = new DMParser(dmLexer);
-                ast_open = dmParser.File();
-
-                if (dmParser.Errors.Count > 0) {
-                    foreach (CompilerError error in dmParser.Errors) {
-                        Console.WriteLine(error.ToString());
-                    }
-                }
-
-                open_hash = new DMAST.ASTHasher();
-                open_hash.HashFile(ast_open);
-                DMPreprocessor dmpp2 = DMCompiler.Program.Preprocess(new List<string> { original.FullName });
-                DMLexer dmLexer2 = new DMLexer(null, dmpp.GetResult());
-                DMParser dmParser2 = new DMParser(dmLexer);
-                DMASTFile ast_empty = dmParser.File();
-
-                new FixEmpty(empty_root, root).Begin();
-
-                var converter = new ConvertAST();
-                converter.VisitDefine = DefineComparer;
-
-                try {
-                    DMASTFile ast_clopen = converter.GetFile(root);
-                    ASTMerge.Merge(ast_empty, ast_clopen);
-                }
-                catch {
-                    Console.WriteLine(converter.ProcNode.PrintLeaves(20));
-                    throw;
-                }
-
-
-                return 0;
-            });
             return rootCommand.InvokeAsync(args).Result;
         }
-        static DMASTFile ast_open;
-        static DMAST.ASTHasher open_hash;
-        static DMAST.DMASTNodePrinter printer = new();
-        static DMASTSimplifier simplify = new();
 
-        static (object, object, string, object) lastCompare;
-        static void CompareResult(object nl, object nr, string ty, object msg) {
-            lastCompare = (nl, nr, ty, msg);
+        static int ClopenParseHandler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir, FileInfo json_file, string mode) {
+            if (mode == "clopen") {
+                Console.WriteLine("clopen parse");
+                DMASTFile ast = ClopenParse(byond_codetree, dm_original, working_dir);
+                File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast));
+            }
+            else if (mode == "open") {
+                Console.WriteLine("open parse");
+                DMASTFile ast = OpenParse(dm_original);
+                File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast));
+            }
+            else {
+                throw new Exception("invalid mode");
+            }
+            return 0;
         }
 
-        static void PrintCompareResult(object nl, object nr, string s) {
-            Console.WriteLine("=============");
-            Console.WriteLine(s);
-            Console.WriteLine("-------------");
-            printer.Print(nl, Console.Out);
-            Console.WriteLine();
-            Console.WriteLine("-------------");
-            printer.Print(nr, Console.Out);
-            Console.WriteLine();
+        static int ClopenCompareHandler(FileInfo ast_r_file, FileInfo ast_l_file) {
+            DMASTFile ast_r = JsonConvert.DeserializeObject(ast_r_file.FullName) as DMASTFile;
+            DMASTFile ast_l = JsonConvert.DeserializeObject(ast_l_file.FullName) as DMASTFile;
+            return 0;
         }
 
-        static void DefineComparer(Node n, DMASTNode node) {
-//            return;
-
-            var orig_nodes = open_hash.GetNode(node);
-            var found_match = false;
-
-            if (node is DMASTProcDefinition pd) {
-                // TODO OD doesnt handle an empty for body correctly
-                if (pd.ObjectPath.ToString() == "/obj/machinery/computer/cloning" && pd.Name == "findscanner") {
-                    return;
-                }
-                // NOTE byond drops the user param of this function
-                if (pd.ObjectPath.ToString() == "/obj/structure/closet" && pd.Name == "toggle") {
-                    return;
-                }
-            }
-            foreach (var orig_node in orig_nodes) {
-                simplify.SimplifyAST(node);
-                simplify.SimplifyAST(orig_node);
-                if (ASTCompare.Compare(node, orig_node, CompareResult)) {
-                    found_match = true;
-                }
-            }
-            if (found_match == false) {
-                File.WriteAllText(Path.Combine(arg_working_dir.FullName, "clopendream_ast.txt"), n.PrintLeaves(20));
-                var f1 = File.CreateText(Path.Combine(arg_working_dir.FullName, "error_clopen.txt"));
-                printer.Print(node, f1, label:true);
-                f1.Close();
-                var f2 = File.CreateText(Path.Combine(arg_working_dir.FullName, "error_open.txt"));
-                foreach (var orig_node in orig_nodes) {
-                    printer.Print(orig_node, f2, label:true);
-                    f2.WriteLine("---------------");
-                }
-                f2.Close();
-                PrintCompareResult(lastCompare.Item1, lastCompare.Item2, lastCompare.Item3);
-                throw new Exception();
-            }
-
+        static DMASTFile OpenParse(FileInfo dm_original) {
+            DMASTFile ast = GetAST(dm_original.FullName);
+            return ast;
         }
-    }
+        static DMASTFile ClopenParse(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
+            Parser p = new();
+            Node root = p.BeginParse(byond_codetree.OpenText(), dm_original);
+            root.FixLabels();
+
+            DMASTFile ast_empty = GetAST(Path.Combine(working_dir.FullName, "empty.dm"));
+            FileInfo empty_code_tree = new FileInfo(Path.Combine(working_dir.FullName, "empty-code-tree.txt"));
+            Node empty_root = p.BeginParse(empty_code_tree.OpenText());
+            empty_root.FixLabels();
+
+            new FixEmpty(empty_root, root).Begin();
+
+            var converter = new ConvertAST();
+            DMASTFile ast_clopen;
+            try {
+                ast_clopen = converter.GetFile(root);
+                ASTMerge.Merge(ast_empty, ast_clopen);
+            }
+            catch {
+                Console.WriteLine(converter.ProcNode.PrintLeaves(20));
+                throw;
+            }
+            return ast_clopen;
+        }
+
+        class ASTModel {
+            public DMASTFile FileNode;
+            public DMAST.ASTHasher DefineHash;
+
+            public ASTModel(DMASTFile file_node) { FileNode = file_node; }
+
+            public void Update() {
+                DefineHash = new DMAST.ASTHasher();
+                DefineHash.HashFile(FileNode);
+            }
+        }
+
+        static DMASTFile GetAST(string filename) {
+            DMPreprocessor dmpp = DMCompiler.Program.Preprocess(new List<string> { filename });
+            DMLexer dmLexer = new DMLexer(null, dmpp.GetResult());
+            DMParser dmParser = new DMParser(dmLexer);
+            if (dmParser.Errors.Count > 0) {
+                foreach (CompilerError error in dmParser.Errors) {
+                    Console.WriteLine(error.ToString());
+                }
+            }
+            DMASTFile ast = dmParser.File();
+            return ast;
+        }
+
+     }
 }

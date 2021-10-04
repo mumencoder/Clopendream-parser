@@ -1,7 +1,7 @@
 ﻿
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class LabelContext {
 
         bool CheckStatement(Node node) {

@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class LabelContext {
         bool CheckExpression(Node node) {
             if (Parse(CheckOperatorExpression, node)) { return true; }

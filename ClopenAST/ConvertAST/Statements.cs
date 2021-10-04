@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using OpenDreamShared.Compiler.DM;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class ConvertAST {
 
         Node DebugStatementNode = null;

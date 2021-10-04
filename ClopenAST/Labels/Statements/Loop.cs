@@ -1,5 +1,5 @@
 ﻿
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class LabelContext {
         bool CheckForStmt(Node node) {
             if (!node.CheckTag("keyword", "for")) { return false; }

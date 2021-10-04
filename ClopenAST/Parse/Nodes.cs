@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Linq;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public class Location {
         public string Sourcefile { get; set; }

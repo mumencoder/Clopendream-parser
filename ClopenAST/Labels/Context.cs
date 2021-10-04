@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public class LabelException : Exception {
 
         LabelContext Context;

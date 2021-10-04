@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class ConvertAST {
         DMASTExpression GetExpression(Node node) {
             while (node.IgnoreBlank() != node) {

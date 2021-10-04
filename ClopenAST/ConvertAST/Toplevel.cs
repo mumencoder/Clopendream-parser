@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Compiler.DM;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class ConvertAST {
 
         public ConvertAST() { }
@@ -67,7 +67,7 @@ namespace DMTreeParse {
         DMASTProcDefinition GetProcDecl(Node n, Stack<Node> pathStack) {
             pathStack.Push(n);
             var path = ExtractPath(pathStack);
-            Console.WriteLine("GetProcDecl \"" + path + "\"");
+//            Console.WriteLine("GetProcDecl \"" + path + "\"");
             ProcNode = n;
             var body = GetProcBlockInner(n.Leaves.Skip(1).ToList());
             if (n.Leaves.Count == 1) {

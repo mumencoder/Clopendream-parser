@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public partial class Parser {
 
@@ -35,7 +35,7 @@ namespace DMTreeParse {
             }
             return indent;
         }
-        public Node BeginParse(System.IO.TextReader input, string repo_base) {
+        public Node BeginParse(System.IO.TextReader input, FileInfo original_file = null) {
             _input = input;
 
             var root = new Node();

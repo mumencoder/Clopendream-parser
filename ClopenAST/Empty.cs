@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public class FixEmpty {
 
         public Node EmptyRoot, FixRoot;

@@ -3,7 +3,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public partial class Parser {
         private bool is_alpha(char c) {

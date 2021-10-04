@@ -3,7 +3,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public partial class NodeTraveler {
 

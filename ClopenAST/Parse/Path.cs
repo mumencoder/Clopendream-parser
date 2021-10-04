@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public partial class Parser {
         public string[] ExpressionDereference() {

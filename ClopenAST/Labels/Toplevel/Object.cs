@@ -1,5 +1,5 @@
 ﻿
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class LabelContext {
         bool CheckObjectAssignStmt(Node node) {
             if (!node.CheckTag("operator", "=")) { return false; }

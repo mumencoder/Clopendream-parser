@@ -9,7 +9,7 @@ using OpenDreamShared.Dream;
 using OpenDreamShared.Dream.Procs;
 using OpenDreamShared.Compiler.DM;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public class ASTCompare {
         public void CompareTopLevel(DMAST.ASTHasher l_hash, DMAST.ASTHasher r_hash) {
             var def_n = 0;

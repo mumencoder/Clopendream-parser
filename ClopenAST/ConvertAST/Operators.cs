@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Compiler.DM;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class ConvertAST {
 
         DMASTExpression GetOperator(Node n) {

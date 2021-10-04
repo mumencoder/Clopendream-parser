@@ -1,7 +1,7 @@
 ﻿
 using System;
 
-namespace DMTreeParse {
+namespace ClopenDream {
 
     public partial class Parser {
         public string ParseTopLevel() {

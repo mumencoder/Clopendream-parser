@@ -4,7 +4,7 @@ using System.Linq;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Compiler.DM;
 
-namespace DMTreeParse {
+namespace ClopenDream {
     public partial class ConvertAST {
 
         DMASTCallParameter GetCallParameter(Node node) {
