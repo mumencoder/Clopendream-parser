@@ -5,14 +5,10 @@ using OpenDreamShared.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
-
-        Node DebugStatementNode = null;
-
         IEnumerable<DMASTProcStatement> GetProcStatements(List<Node> nodes) {
             int cnode = 0;
             while (cnode < nodes.Count) {
                 var node = nodes[cnode];
-                DebugStatementNode = node;
 
                 if (node.Labels.Contains("IfStmt")) {
                     cnode += 1;

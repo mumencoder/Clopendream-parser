@@ -12,6 +12,13 @@ namespace ClopenDream {
         Stack<DMASTExpression> derefExprStack = new();
         Stack<bool> derefExprCond = new();
 
+        public Dictionary<Node, DMASTNode> closed_to_clopen_node = new();
+        public Dictionary<DMASTNode, Node> clopen_to_closed_node = new();
+
+        void AssociateNodes(Node n, DMASTNode node) {
+            closed_to_clopen_node[n] = node;
+            clopen_to_closed_node[node] = n;
+        }
         string ExtractNodePath(Node n) {
             if (n.Tags.ContainsKey("bare")) {
                 return (string)n.Tags["bare"];

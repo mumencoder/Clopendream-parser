@@ -1,9 +1,6 @@
 ﻿
 using System;
-using System.Text;
 using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Linq;
 using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Dream.Procs;
@@ -49,29 +46,40 @@ namespace ClopenDream {
             typeof(DMValueType)
         };
 
-        public static bool Compare(object node_l, object node_r, Action<object, object, string, object> cr) {
+        public class Result {
+            public object A;
+            public object B;
+            public string ResultType;
+            public object ResultValue;
+
+            public Result(object a, object b, string result_type, object result_value = null) {
+                A = a;
+                B = b;
+                ResultType = result_type;
+                ResultValue = result_value;
+            }
+        }
+
+        public static bool Compare(object node_l, object node_r, Action<Result> cr) {
             if (node_l == null || node_r == null) {
                 if (node_r == node_l) { return true; }
                 // note sometimes null, sometimes not in OD
                 if (node_l is DMASTCallParameter[] || node_r is DMASTCallParameter[]) {
                     return true;
                 }
-                cr(node_l, node_r, "null mismatch", "");
+                cr(new(node_l, node_r, "null mismatch"));
                 return false;
             }
 
             // byond optimizes ternary expressions
             if (node_l is DMASTProcStatementIf if_node && node_r is DMASTProcStatementExpression stexpr) {
-                Console.WriteLine("!");
                 if (if_node.Condition is DMASTNot && stexpr.Expression is DMASTTernary t) {
-                    Console.WriteLine("!2");
                     if (t.B is DMASTConstantNull) {
-                        Console.WriteLine("!3");
                         return true;
                     }
                 }
             }
-            if (node_l.GetType() != node_r.GetType()) { cr(node_l, node_r, "type mismatch", ""); return false; }
+            if (node_l.GetType() != node_r.GetType()) { cr(new(node_l, node_r, "type mismatch")); return false; }
 
             foreach (var field in node_l.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)) {
                 Type compare_ty = Nullable.GetUnderlyingType(field.FieldType);
@@ -88,7 +96,7 @@ namespace ClopenDream {
                     if ((vr is DMASTCallParameter[] && vl == null)) {
                         continue;
                     }
-                    cr(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name);
+                    cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
                     return false;
                 }
 
@@ -128,7 +136,7 @@ namespace ClopenDream {
                     ar = new_r.ToArray();
                     if (al == null || ar == null) {
                         if (al == ar) { continue; }
-                        cr(al, ar, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name);
+                        cr(new(al, ar, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
                         return false;
                     }
 
@@ -148,14 +156,14 @@ namespace ClopenDream {
                         for (int i = lo.Length; i < hi.Length; i++) {
                             var extra = hi.GetValue(i) as DMASTNode;
                             if (!Compare(extra, new DMASTCallParameter(new DMASTConstantNull()), cr)) {
-                                cr(al, ar, "array length mistmatch", extra);
+                                cr(new(al, ar, "array length mistmatch", extra));
                                 return false;
                             }
                             null_ct++;
                         }
                     }
                     if (Math.Abs(lo.Length - hi.Length) != null_ct) {
-                        cr(vl, vr, "field mismatch array length", "");
+                        cr(new(vl, vr, "field mismatch array length", ""));
                         return false;
                     }
                     for (var i = 0; i < lo.Length; i++) {
@@ -182,7 +190,7 @@ namespace ClopenDream {
                         continue;
                     }
                     if (!vl.Equals(vr)) {
-                        cr(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name);
+                        cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
                         return false;
                     }
                 }
@@ -190,13 +198,13 @@ namespace ClopenDream {
                     var pathr = vl as DreamPath?;
                     var pathl = vr as DreamPath?;
                     if (!pathr.Equals(pathl)) {
-                        cr(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name);
+                        cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
                         return false;
                     }
                 }
                 else if (equality_field_types.Contains(compare_ty)) {
                     if (!vl.Equals(vr)) {
-                        cr(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name);
+                        cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
                         return false;
                     }
                 }

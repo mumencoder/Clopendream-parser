@@ -50,6 +50,7 @@ namespace ClopenDream {
                 pathStack.Push(node.Leaves[0]);
                 var define = new DMASTObjectVarOverride(ExtractPath(pathStack), GetExpression(node.Leaves[1]));
                 VisitDefine(node, define);
+                AssociateNodes(node, define);
                 yield return define;
                 pathStack.Pop();
             }
@@ -75,6 +76,7 @@ namespace ClopenDream {
             }
             var procdef = new DMASTProcDefinition(path, GetProcParameters(n.Leaves[0]), body);
             VisitDefine(n, procdef);
+            AssociateNodes(n, procdef);
             pathStack.Pop();
             return procdef;
         }
@@ -162,6 +164,7 @@ namespace ClopenDream {
                 }
                 var define = new DMASTObjectVarDefinition(ExtractPath(pathStack), expr);
                 VisitDefine(node, define);
+                AssociateNodes(node, define);
                 yield return define;
                 pathStack.Pop();
             }

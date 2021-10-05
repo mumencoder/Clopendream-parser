@@ -1,32 +1,28 @@
 ﻿
 using System;
+using System.Collections.Generic;
 using OpenDreamShared.Compiler.DM;
 using DMCompiler.DM.Visitors;
 
 namespace ClopenDream {
-    class ASTComparer {
-        (object, object, string, object) lastCompare;
-        DMAST.DMASTNodePrinter printer = new();
-        DMAST.ASTHasher open_ast_hash = new();
+    public class ASTComparer {
+        List<ASTCompare.Result> compareResults = new();
         DMASTSimplifier simplify = new();
 
-        void CompareResult(object nl, object nr, string ty, object msg) {
-            lastCompare = (nl, nr, ty, msg);
+        DMAST.ASTHasher _openAstHash = new();
+        public Action<DMASTNode, List<DMASTNode>, List<ASTCompare.Result>> MismatchEvent = (_,_,_) => { };
+
+        public ASTComparer(DMAST.ASTHasher open_ast_hash) {
+            _openAstHash = open_ast_hash;
         }
 
-        void PrintCompareResult(object nl, object nr, string s) {
-            Console.WriteLine("=============");
-            Console.WriteLine(s);
-            Console.WriteLine("-------------");
-            printer.Print(nl, Console.Out);
-            Console.WriteLine();
-            Console.WriteLine("-------------");
-            printer.Print(nr, Console.Out);
-            Console.WriteLine();
+        void CompareResult(ASTCompare.Result result) {
+            compareResults.Add(result);
         }
 
-        void DefineComparer(Node n, DMASTNode node) {
-            var orig_nodes = open_ast_hash.GetNode(node);
+        public void DefineComparer(DMASTNode node) {
+            compareResults.Clear();
+            var orig_nodes = _openAstHash.GetNode(node);
             var found_match = false;
 
             if (node is DMASTProcDefinition pd) {
@@ -47,17 +43,7 @@ namespace ClopenDream {
                 }
             }
             if (found_match == false) {
-                //File.WriteAllText(Path.Combine(arg_working_dir.FullName, "clopendream_ast.txt"), n.PrintLeaves(20));
-                //var f1 = File.CreateText(Path.Combine(arg_working_dir.FullName, "error_clopen.txt"));
-                //printer.Print(node, f1, label: true);
-                //f1.Close();
-                //var f2 = File.CreateText(Path.Combine(arg_working_dir.FullName, "error_open.txt"));
-                //foreach (var orig_node in orig_nodes) {
-                //    printer.Print(orig_node, f2, label: true);
-                //    f2.WriteLine("---------------");
-                //}
-                //f2.Close();
-                //PrintCompareResult(lastCompare.Item1, lastCompare.Item2, lastCompare.Item3);
+                MismatchEvent(node, orig_nodes, compareResults);
                 throw new Exception();
             }
         }
