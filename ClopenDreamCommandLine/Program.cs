@@ -28,8 +28,8 @@ namespace ClopenDream {
             rootCommand.AddCommand(command);
 
             command = new Command("compare") {
-                new Argument<FileInfo>("ast_r_file", "AST #1"),
-                new Argument<FileInfo>("ast_l_file", "AST #2"),
+                new Argument<FileInfo>("ast_l_file", "AST #1"),
+                new Argument<FileInfo>("ast_r_file", "AST #2"),
                 new Argument<DirectoryInfo>("output_dir", "Output directory")
             };
             command.Description = "Compare two AST files";
@@ -40,11 +40,10 @@ namespace ClopenDream {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
                 new Argument<FileInfo>("open_ast_file", "OpenDream AST"),
                 new Argument<DirectoryInfo>("empty_dir", "Directory containing empty.dm"),
-                new Argument<DirectoryInfo>("working_dir", "Working directory for output"),
                 new Argument<DirectoryInfo>("output_dir", "Output directory")
             };
             command.Description = "Parse a DM file with ClopenDream and compare it to an OpenDream AST file";
-            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo, DirectoryInfo, DirectoryInfo>(ParseCompareHandler);
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo, DirectoryInfo>(ParseCompareHandler);
             rootCommand.AddCommand(command);
 
             return rootCommand.InvokeAsync(args).Result;
@@ -66,13 +65,20 @@ namespace ClopenDream {
             }
             return 0;
         }
-        static int CompareHandler(FileInfo ast_r_file, FileInfo ast_l_file, DirectoryInfo output_dir) {
-            DMASTFile ast_r = JsonConvert.DeserializeObject(ast_r_file.FullName) as DMASTFile;
+        static int CompareHandler(FileInfo ast_l_file, FileInfo ast_r_file, DirectoryInfo output_dir) {
             DMASTFile ast_l = JsonConvert.DeserializeObject(ast_l_file.FullName) as DMASTFile;
+            DMASTFile ast_r = JsonConvert.DeserializeObject(ast_r_file.FullName) as DMASTFile;
+            var hasher_l = new DMAST.ASTHasher();
+            var hasher_r = new DMAST.ASTHasher();
+            hasher_l.HashFile(ast_l);
+            hasher_r.HashFile(ast_r);
+            var comparer = new ASTComparer(hasher_l);
+
             return 0;
         }
-        static int ParseCompareHandler(FileInfo byond_codetree, FileInfo open_ast_file, DirectoryInfo empty_dir, DirectoryInfo working_dir, DirectoryInfo output_dir) {
-            DMASTFile clopen_ast = ClopenParse(byond_codetree, empty_dir);
+        static int ParseCompareHandler(FileInfo byond_codetree, FileInfo open_ast_file, DirectoryInfo empty_dir, DirectoryInfo output_dir) {
+            DMASTFile open_ast = JsonConvert.DeserializeObject(open_ast_file.FullName) as DMASTFile;
+            ClopenParse(byond_codetree, empty_dir, open_ast, output_dir);
             return 0;
         }
 
@@ -81,7 +87,7 @@ namespace ClopenDream {
             return ast;
         }
 
-        static DMASTFile ClopenParse(FileInfo byond_codetree, DirectoryInfo empty_dir, DMASTFile open_root = null, DirectoryInfo working_dir = null) {
+        static DMASTFile ClopenParse(FileInfo byond_codetree, DirectoryInfo empty_dir, DMASTFile open_root = null, DirectoryInfo output_dir = null) {
             Parser p = new();
             Node root = p.BeginParse(byond_codetree.OpenText());
             root.FixLabels();
@@ -115,11 +121,11 @@ namespace ClopenDream {
 
             void ProcessMismatchResult(DMASTNode clopen_node, List<DMASTNode> orig_nodes, List<ASTCompare.Result> results) {
                 DMAST.DMASTNodePrinter printer = new();
-                File.WriteAllText(Path.Combine(working_dir.FullName, "clopendream_ast.txt"), converter.clopen_to_closed_node[clopen_node].PrintLeaves(20));
-                var f1 = File.CreateText(Path.Combine(working_dir.FullName, "error_clopen.txt"));
+                File.WriteAllText(Path.Combine(output_dir.FullName, "clopendream_ast.txt"), converter.clopen_to_closed_node[clopen_node].PrintLeaves(20));
+                var f1 = File.CreateText(Path.Combine(output_dir.FullName, "error_clopen.txt"));
                 printer.Print(clopen_node, f1, label: true);
                 f1.Close();
-                var f2 = File.CreateText(Path.Combine(working_dir.FullName, "error_open.txt"));
+                var f2 = File.CreateText(Path.Combine(output_dir.FullName, "error_open.txt"));
                 foreach (var orig_node in orig_nodes) {
                     printer.Print(orig_node, f2, label: true);
                     f2.WriteLine("---------------");
