@@ -7,6 +7,7 @@ using System.CommandLine.Invocation;
 using OpenDreamShared.Compiler;
 using OpenDreamShared.Compiler.DMPreprocessor;
 using OpenDreamShared.Compiler.DM;
+using OpenDreamShared.Dream;
 using Newtonsoft.Json;
 
 namespace ClopenDream {
@@ -46,6 +47,21 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo, DirectoryInfo>(ParseCompareHandler);
             rootCommand.AddCommand(command);
 
+            command = new Command("obj-tree") {
+                new Argument<FileInfo>("dm_original", "Original DM file"),
+                new Argument<DirectoryInfo>("output_dir", "Output directory"),
+                new Option<string>("--mode", getDefaultValue: () => "original")
+            };
+            command.Description = "Create a DMObjectTree and write it to JSON";
+            command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, string>(ObjTreeHandler);
+
+            command = new Command("obj-tree-compare") {
+                new Argument<DirectoryInfo>("output_dir", "Output directory"),
+            };
+            command.Description = "Compare the object tree";
+            command.Handler = CommandHandler.Create<DirectoryInfo>(ObjTreeCompareHandler);
+
+            rootCommand.AddCommand(command);
             return rootCommand.InvokeAsync(args).Result;
         }
 
@@ -79,6 +95,37 @@ namespace ClopenDream {
         static int ParseCompareHandler(FileInfo byond_codetree, FileInfo open_ast_file, DirectoryInfo empty_dir, DirectoryInfo output_dir) {
             DMASTFile open_ast = JsonConvert.DeserializeObject(open_ast_file.FullName) as DMASTFile;
             ClopenParse(byond_codetree, empty_dir, open_ast, output_dir);
+            return 0;
+        }
+
+        static int ObjTreeHandler(FileInfo dm_original, DirectoryInfo output_dir, string mode) {
+            string json_file = null;
+            if (mode == "original") {
+                json_file = "original_objtree.json";
+                DMCompiler.Program.CompileUsingOldParser(dm_original.FullName);
+            }
+            if (mode == "spaceman") {
+                json_file = "spaceman_objtree.json";
+                DMCompiler.Program.CompileUsingSpacemanParser(dm_original.FullName);
+            }
+            List<DreamPath> paths = new();
+            foreach (var obj in DMCompiler.DM.DMObjectTree.AllObjects) {
+                paths.Add(obj.Key);
+            }
+            File.WriteAllText(Path.Combine(output_dir.FullName, json_file), JsonConvert.SerializeObject(paths));
+            return 0;
+        }
+
+        static int ObjTreeCompareHandler(DirectoryInfo output_dir) {
+            var paths1 = JsonConvert.DeserializeObject<List<DreamPath>>( File.ReadAllText(Path.Combine(output_dir.FullName, "original_objtree.json")));
+            var paths2 = JsonConvert.DeserializeObject<List<DreamPath>>( File.ReadAllText(Path.Combine(output_dir.FullName, "spaceman_objtree.json")));
+
+            HashSet<DreamPath> h1 = new(paths1);
+            foreach (var path in paths2) {
+                if (!h1.Contains(path)) {
+                    Console.WriteLine("opendream is missing: " + path);
+                }
+            }
             return 0;
         }
 
@@ -150,7 +197,7 @@ namespace ClopenDream {
         }
 
         static DMASTFile GetAST(string filename) {
-            DMPreprocessor dmpp = DMCompiler.Program.Preprocess(new List<string> { filename });
+            DMPreprocessor dmpp = DMCompiler.Program.Preprocess(filename);
             DMLexer dmLexer = new DMLexer(null, dmpp.GetResult());
             DMParser dmParser = new DMParser(dmLexer);
             if (dmParser.Errors.Count > 0) {
