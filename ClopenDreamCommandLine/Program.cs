@@ -47,6 +47,7 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo, DirectoryInfo>(ParseCompareHandler);
             rootCommand.AddCommand(command);
 
+            /*
             command = new Command("obj-tree") {
                 new Argument<FileInfo>("dm_original", "Original DM file"),
                 new Argument<DirectoryInfo>("output_dir", "Output directory"),
@@ -54,6 +55,7 @@ namespace ClopenDream {
             };
             command.Description = "Create a DMObjectTree and write it to JSON";
             command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, string>(ObjTreeHandler);
+            */
 
             command = new Command("obj-tree-compare") {
                 new Argument<DirectoryInfo>("output_dir", "Output directory"),
@@ -98,6 +100,7 @@ namespace ClopenDream {
             return 0;
         }
 
+        /*
         static int ObjTreeHandler(FileInfo dm_original, DirectoryInfo output_dir, string mode) {
             string json_file = null;
             if (mode == "original") {
@@ -115,6 +118,7 @@ namespace ClopenDream {
             File.WriteAllText(Path.Combine(output_dir.FullName, json_file), JsonConvert.SerializeObject(paths));
             return 0;
         }
+        */
 
         static int ObjTreeCompareHandler(DirectoryInfo output_dir) {
             var paths1 = JsonConvert.DeserializeObject<List<DreamPath>>( File.ReadAllText(Path.Combine(output_dir.FullName, "original_objtree.json")));
@@ -197,7 +201,7 @@ namespace ClopenDream {
         }
 
         static DMASTFile GetAST(string filename) {
-            DMPreprocessor dmpp = DMCompiler.Program.Preprocess(filename);
+            DMPreprocessor dmpp = DMCompiler.Program.Preprocess(new() { filename });
             DMLexer dmLexer = new DMLexer(null, dmpp.GetResult());
             DMParser dmParser = new DMParser(dmLexer);
             if (dmParser.Errors.Count > 0) {
