@@ -37,9 +37,16 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(CompareHandler);
             rootCommand.AddCommand(command);
 
+            command = new Command("compare-tokens") {
+                new Argument<FileInfo>("dm_file", "DM file"),
+            };
+            command.Description = "Compare opendream experimental token stream";
+            command.Handler = CommandHandler.Create<FileInfo>(CompareTokensHandler);
+            rootCommand.AddCommand(command);
+
             command = new Command("parse-compare") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
-                new Argument<FileInfo>("open_ast_file", "OpenDream AST"),
+                new Argument<FileInfo>("dm_file", "Original DM file"),
                 new Argument<DirectoryInfo>("empty_dir", "Directory containing empty.dm"),
                 new Argument<DirectoryInfo>("output_dir", "Output directory")
             };
@@ -68,34 +75,41 @@ namespace ClopenDream {
         }
 
         static int ParseHandler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo empty_dir, FileInfo json_file, string mode) {
+            DMASTFile ast;
             if (mode == "clopen") {
                 Console.WriteLine("clopen parse");
-                DMASTFile ast = ClopenParse(byond_codetree, empty_dir);
-                File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast));
+                ast = ClopenParse(byond_codetree, empty_dir);
             }
             else if (mode == "open") {
                 Console.WriteLine("open parse");
-                DMASTFile ast = OpenParse(dm_original);
-                File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast));
+                ast = OpenParse(dm_original);
+            }
+            else if (mode == "open-experimental") {
+                Console.WriteLine("open-experimental parse");
+                ast = DMCompiler.Program.ExperimentalCompile(dm_original.FullName);
             }
             else {
-                throw new Exception("invalid mode");
+                throw new Exception("invalid moode " + mode);
             }
+            var options = new JsonSerializerSettings {
+                TypeNameHandling = TypeNameHandling.All
+            };
+            File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast, options));
             return 0;
         }
         static int CompareHandler(FileInfo ast_l_file, FileInfo ast_r_file, DirectoryInfo output_dir) {
-            DMASTFile ast_l = JsonConvert.DeserializeObject(ast_l_file.FullName) as DMASTFile;
-            DMASTFile ast_r = JsonConvert.DeserializeObject(ast_r_file.FullName) as DMASTFile;
-            var hasher_l = new DMAST.ASTHasher();
-            var hasher_r = new DMAST.ASTHasher();
-            hasher_l.HashFile(ast_l);
-            hasher_r.HashFile(ast_r);
-            var comparer = new ASTComparer(hasher_l);
-
+            DMASTFile ast_l = JsonConvert.DeserializeObject(File.ReadAllText(ast_l_file.FullName)) as DMASTFile;
+            DMASTFile ast_r = JsonConvert.DeserializeObject(File.ReadAllText(ast_r_file.FullName)) as DMASTFile;
+            CompareAST(output_dir, ast_l, ast_r);
             return 0;
         }
-        static int ParseCompareHandler(FileInfo byond_codetree, FileInfo open_ast_file, DirectoryInfo empty_dir, DirectoryInfo output_dir) {
-            DMASTFile open_ast = JsonConvert.DeserializeObject(open_ast_file.FullName) as DMASTFile;
+
+        static int CompareTokensHandler(FileInfo dm_file) {
+            DMCompiler.Program.CompareTokens(new() { dm_file.FullName });
+            return 0;
+        }
+        static int ParseCompareHandler(FileInfo byond_codetree, FileInfo dm_file, DirectoryInfo empty_dir, DirectoryInfo output_dir) {
+            var open_ast = DMCompiler.Program.ExperimentalCompile(dm_file.FullName);
             ClopenParse(byond_codetree, empty_dir, open_ast, output_dir);
             return 0;
         }
@@ -133,6 +147,14 @@ namespace ClopenDream {
             return 0;
         }
 
+        static void CompareAST(DirectoryInfo output_dir, DMASTFile ast_l, DMASTFile ast_r) {
+            var hasher_l = new DMAST.ASTHasher();
+            var hasher_r = new DMAST.ASTHasher();
+            hasher_l.HashFile(ast_l);
+            hasher_r.HashFile(ast_r);
+            var comparer = new ASTComparer(hasher_l);
+        }
+
         static DMASTFile OpenParse(FileInfo dm_original) {
             DMASTFile ast = GetAST(dm_original.FullName);
             return ast;
@@ -149,7 +171,7 @@ namespace ClopenDream {
             empty_root.FixLabels();
             new FixEmpty(empty_root, root).Begin();
 
-
+            int compared_ct = 0;
             var converter = new ConvertAST();
             ASTComparer comparer;
             if (open_root != null) {
@@ -165,7 +187,7 @@ namespace ClopenDream {
                 ASTMerge.Merge(ast_empty, ast_clopen);
             }
             catch {
-                Console.WriteLine(converter.ProcNode.PrintLeaves(20));
+                //Console.WriteLine(converter.ProcNode.PrintLeaves(20));
                 throw;
             }
             return ast_clopen;
@@ -183,6 +205,7 @@ namespace ClopenDream {
                 }
                 f2.Close();
                 foreach (var result in results) {
+                    Console.WriteLine("Compared: " + compared_ct);
                     Console.WriteLine("=============");
                     Console.WriteLine(result.ResultType);
                     Console.WriteLine("-------------");
@@ -192,9 +215,11 @@ namespace ClopenDream {
                     printer.Print(result.B, Console.Out);
                     Console.WriteLine();
                 }
+                throw new Exception();
             }
 
             void DefineCompare(Node n, DMASTNode node) {
+                compared_ct += 1;
                 comparer.DefineComparer(node);
             }
 
@@ -204,12 +229,12 @@ namespace ClopenDream {
             DMPreprocessor dmpp = DMCompiler.Program.Preprocess(new() { filename });
             DMLexer dmLexer = new DMLexer(null, dmpp.GetResult());
             DMParser dmParser = new DMParser(dmLexer);
+            DMASTFile ast = dmParser.File();
             if (dmParser.Errors.Count > 0) {
                 foreach (CompilerError error in dmParser.Errors) {
                     Console.WriteLine(error.ToString());
                 }
             }
-            DMASTFile ast = dmParser.File();
             return ast;
         }
 
