@@ -41,6 +41,8 @@ namespace ClopenDream {
                 case ">>": return GetLeftAssoc(n.Leaves, typeof(DMASTRightShift));
                 case "==": return GetLeftAssoc(n.Leaves, typeof(DMASTEqual));
                 case "!=": return GetLeftAssoc(n.Leaves, typeof(DMASTNotEqual));
+                case "~=": return GetLeftAssoc(n.Leaves, typeof(DMASTEquivalent));
+                case "~!": return GetLeftAssoc(n.Leaves, typeof(DMASTNotEquivalent));
                 case ">": return GetLeftAssoc(n.Leaves, typeof(DMASTGreaterThan));
                 case "<": return GetLeftAssoc(n.Leaves, typeof(DMASTLessThan));
                 case ">=": return GetLeftAssoc(n.Leaves, typeof(DMASTGreaterThanOrEqual));
@@ -64,7 +66,10 @@ namespace ClopenDream {
                     }
                 case "++": return new DMASTPreIncrement(GetExpression(n.Leaves[0]));
                 case "--": return new DMASTPreDecrement(GetExpression(n.Leaves[0]));
-                case "?.": return GetDerefOperator(n); 
+                case ".": return GetDerefOperator(n);
+                case "?:": return GetDerefOperator(n);
+                case "?.": return GetDerefOperator(n);
+                case "?.(lhs)": return GetDerefOperator(n);
                 default: throw n.Error("GetOperator " + n.Tags["operator"]);
             }
         }
@@ -73,14 +78,17 @@ namespace ClopenDream {
             if (n.Leaves.Count != 2) {
                 throw n.Error("Count != 2");
             }
+            string op = n.Tags["operator"] as string;
             var sub_expr = GetExpression(n.Leaves[0]);
             derefExprStack.Push(sub_expr);
-            derefExprCond.Push(true);
+            if (op.Contains("?")) {
+                derefExprCond.Push(true);
+            }
+            else {
+                derefExprCond.Push(false);
+            }
             var supra_expr = GetExpression(n.Leaves[1]);
             derefExprStack.Pop();
-//            if (supra_expr is DMASTDereference deref1 && deref1.Expression is DMASTDereference deref2) {
-//                return new DMASTDereference(deref2.Expression, deref2.Dereferences.Concat<DMASTDereference.Dereference>(deref1.Dereferences).ToArray());
-//            }
             derefExprCond.Pop();
             return supra_expr;
         }

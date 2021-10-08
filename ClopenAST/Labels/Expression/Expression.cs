@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace ClopenDream {
     public partial class LabelContext {
         bool CheckExpression(Node node) {
+            if (Parse(CheckSelfExpression, node)) { return true; }
             if (Parse(CheckOperatorExpression, node)) { return true; }
             if (Parse(CheckChainExpression, node)) { return true; }
             if (Parse(CheckLiteralExpression, node)) { return true; }
@@ -18,7 +19,6 @@ namespace ClopenDream {
             if (Parse(CheckCallExpression, node)) { return true; }
             if (Parse(CheckDynamicCallExpression, node)) { return true; }
             if (Parse(CheckEmptyExpression, node)) { return true; }
-            if (Parse(CheckSelfExpression, node)) { return true; }
             if (Parse(CheckBuiltinExpression, node)) { return true; }
             if (Parse(CheckLotsaDots, node)) { return true; }
             if (Parse(CheckTupleExpression, node)) { return true; }
@@ -96,7 +96,7 @@ namespace ClopenDream {
             return false;
         }
         bool CheckSelfExpression(Node node) {
-            if (!node.CheckTag("special", ".")) { return false; }
+            if (!node.CheckTagArray("ident", 0, ".")) { return false; }
             if (node.Leaves.Count != 0) { Error(); }
             return true;
         }

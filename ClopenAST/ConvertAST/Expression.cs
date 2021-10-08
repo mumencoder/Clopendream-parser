@@ -47,6 +47,13 @@ namespace ClopenDream {
                 return new DMASTList(paras.ToArray());
 
             }
+            if (node.Labels.Contains("NewlistExpression")) {
+                List<DMASTCallParameter> paras = new();
+                foreach (var leaf in node.Leaves) {
+                    paras.Add(GetCallParameter(leaf));
+                }
+                return new DMASTNewList(paras.ToArray());
+            }
             if (node.Labels.Contains("SelfExpression")) {
                 return new DMASTCallableSelf();
             }

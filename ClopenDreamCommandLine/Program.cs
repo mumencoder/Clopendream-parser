@@ -79,6 +79,7 @@ namespace ClopenDream {
             if (mode == "clopen") {
                 Console.WriteLine("clopen parse");
                 ast = ClopenParse(byond_codetree, empty_dir);
+                DMCompiler.Program.CompileAST(ast);
             }
             else if (mode == "open") {
                 Console.WriteLine("open parse");
@@ -94,7 +95,7 @@ namespace ClopenDream {
             var options = new JsonSerializerSettings {
                 TypeNameHandling = TypeNameHandling.All
             };
-            File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast, options));
+            //File.WriteAllText(json_file.FullName, JsonConvert.SerializeObject(ast, options));
             return 0;
         }
         static int CompareHandler(FileInfo ast_l_file, FileInfo ast_r_file, DirectoryInfo output_dir) {

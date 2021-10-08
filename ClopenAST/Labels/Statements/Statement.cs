@@ -19,6 +19,7 @@ namespace ClopenDream {
             if (Parse(CheckWhileStmt, node)) { return true; }
             if (Parse(CheckDoWhileStmt, node)) { return true; }
             if (Parse(CheckSpawnStmt, node)) { return true; }
+            if (Parse(CheckLabeledBlock, node)) { return true; }
             if (Parse(CheckExplicitBlock, node)) { return true; }
             if (Parse(CheckExpressionStmt, node)) { return true; }
             if (Parse(CheckImplicitBlock, node)) { return true; }

@@ -283,7 +283,7 @@ namespace ClopenDream {
             else if (match(_cText, _cPos, ".)")) {
                 _cPos += 1;
                 node = new Node();
-                node.Tags.Add("special", ".");
+                node.Tags.Add("ident", new string[] { "." });
             }
             else if (left() >= 1 && is_digit(getc()) || getc() == '-') {
                 var num = read_numeric();

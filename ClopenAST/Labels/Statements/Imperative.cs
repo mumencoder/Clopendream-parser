@@ -31,23 +31,29 @@ namespace ClopenDream {
             return Error();
         }
 
+        bool CheckLabeledBlock(Node node) {
+            // TODO keywords can be labels, probably
+            if (node.Tags.ContainsKey("bare") && node.Leaves.Count > 0 && node.Leaves[0].CheckTag("bare", "_block")) {
+                node.Tags.Add("block", node.Tags["bare"]);
+                if (!ParseStatements(CheckStatement, node.Leaves)) { Error(); }
+                return true;
+            }
+            return false;
+        }
 
         bool CheckExplicitBlock(Node node) {
-            // TODO keywords can be labels, probably
-            Node is_block = null;
-            if (node.Tags.ContainsKey("bare") && node.Leaves.Count > 0 && node.Leaves[0].CheckTag("bare", "_block")) { 
-                is_block = node.Leaves[0];
-                node.Tags.Add("block", node.Tags["bare"]);
+            if (node.CheckTag("bare", "_block") && node.Leaves.Count > 0) {
+                if (!ParseStatements(CheckStatement, node.Leaves)) { Error(); }
+                return true;
             }
-            if (node.CheckTag("bare", "_block") && node.Leaves.Count > 0) { is_block = node; }
-            if (is_block == null) { return false; }
-            if (!ParseStatements(CheckStatement, is_block.Leaves)) { Error(); }
-            return true;
+            return false;
         }
         bool CheckImplicitBlock(Node node) {
-            // todo this is still sus
-            if (node.Tags.ContainsKey("bare")) { node.Tags.Add("block", node.Tags["bare"]);  return true; }
-            else { return false; }
+            if (!node.Tags.ContainsKey("bare")) { return false; }
+            node.Tags.Add("block", node.Tags["bare"]);
+            if (!ParseStatements(CheckStatement, node.Leaves)) { Error(); }
+            return true;
+
         }
     }
 }
