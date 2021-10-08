@@ -39,7 +39,7 @@ namespace ClopenDream {
             return true;
         }
 
-        string EscapeString(string s) {
+        public string EscapeString(string s) {
             if (s == null) { return s; }
 
             int write_pos = 0;
@@ -48,6 +48,9 @@ namespace ClopenDream {
             for (read_pos = 0; read_pos < s.Length;) {
                 char c = s[read_pos++];
                 if (c == '\\') {
+                    if (read_pos >= s.Length) {
+                        break;
+                    }
                     char c2 = s[read_pos++];
                     // TODO b here is a bug in the \black escape
                     if (c2 == 'n') {
@@ -72,7 +75,8 @@ namespace ClopenDream {
                         cs[write_pos++] = ']';
                     }
                     else {
-                        throw new Exception("unknown string escape " + s);
+                        cs[write_pos++] = c;
+                        cs[write_pos++] = c2;
                     }
                 }
                 else {
@@ -80,8 +84,6 @@ namespace ClopenDream {
                 }
             }
             return new string(cs.Take<char>(write_pos).ToArray());
-
-            return s;
         }
 
         static string[] ignored_escapes = new string[] { "improper", "proper", "The", "red", "blue", "green", "Roman" };
