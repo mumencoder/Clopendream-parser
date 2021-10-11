@@ -87,7 +87,7 @@ namespace ClopenDream {
             }
             else if (mode == "open-experimental") {
                 Console.WriteLine("open-experimental parse");
-                ast = DMCompiler.Program.ExperimentalCompile(dm_original.FullName);
+                //ast = DMCompiler.Program.ExperimentalCompile(dm_original.FullName);
             }
             else {
                 throw new Exception("invalid moode " + mode);
@@ -106,12 +106,12 @@ namespace ClopenDream {
         }
 
         static int CompareTokensHandler(FileInfo dm_file) {
-            DMCompiler.Program.CompareTokens(new() { dm_file.FullName });
+            //DMCompiler.Program.CompareTokens(new() { dm_file.FullName });
             return 0;
         }
         static int ParseCompareHandler(FileInfo byond_codetree, FileInfo dm_file, DirectoryInfo empty_dir, DirectoryInfo output_dir) {
-            var open_ast = DMCompiler.Program.ExperimentalCompile(dm_file.FullName);
-            ClopenParse(byond_codetree, empty_dir, open_ast, output_dir);
+            //var open_ast = DMCompiler.Program.ExperimentalCompile(dm_file.FullName);
+            //ClopenParse(byond_codetree, empty_dir, open_ast, output_dir);
             return 0;
         }
 
@@ -182,6 +182,9 @@ namespace ClopenDream {
                 converter.VisitDefine = DefineCompare;
                 comparer.MismatchEvent = ProcessMismatchResult;
             }
+            else {
+                converter.VisitDefine = DefineSearch;
+            }
             DMASTFile ast_clopen;
             try {
                 ast_clopen = converter.GetFile(root);
@@ -218,7 +221,13 @@ namespace ClopenDream {
                 }
                 throw new Exception();
             }
-
+            void DefineSearch(Node n, DMASTNode node) {
+                if (node is DMASTProcDefinition pd) {
+//                    if (pd.Name == "create_area") {
+//                        DMAST.Printer.Print(node, Console.Out);
+//                    }
+                }
+            }
             void DefineCompare(Node n, DMASTNode node) {
                 compared_ct += 1;
                 comparer.DefineComparer(node);
