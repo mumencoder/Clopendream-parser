@@ -58,6 +58,9 @@ namespace ClopenDream {
                 return new DMASTCallableSelf();
             }
             if (node.Labels.Contains("PathConstant")) {
+                if (node.Leaves.Count > 0) {
+                    Console.WriteLine("warning: modified types");
+                }
                 string[] path_elements = (string[])node.Tags["path"];
 
                 return new DMASTConstantPath(new DMASTPath(ConvertPath(node)));
@@ -78,6 +81,9 @@ namespace ClopenDream {
                     return new DMASTNewInferred(paras);
                 }
                 else if (node.Leaves[0].Labels.Contains("PathConstant")) {
+                    if (node.Leaves[0].Leaves.Count > 0) {
+                        Console.WriteLine("warning: modified types");
+                    }
                     var path = new DMASTPath(ConvertPath(node.Leaves[0]));
                     if (node.Leaves.Count == 1) {
                         return new DMASTNewPath(path, new DMASTCallParameter[0]);
