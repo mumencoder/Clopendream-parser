@@ -8,6 +8,7 @@ using OpenDreamShared.Compiler;
 using OpenDreamShared.Compiler.DMPreprocessor;
 using OpenDreamShared.Compiler.DM;
 using OpenDreamShared.Dream;
+using OpenDreamShared.Json;
 using Newtonsoft.Json;
 
 namespace ClopenDream {
@@ -20,8 +21,8 @@ namespace ClopenDream {
             var command = new Command("parse") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
                 new Argument<FileInfo>("dm_original", "Original DM file"),
-                new Argument<DirectoryInfo>("empty_dir", "Directory containing empty.dm"),
-                new Argument<FileInfo>("json_file", "AST JSON output"),
+                new Argument<DirectoryInfo>("working_dir", "Directory containing empty.dm"),
+                new Option<FileInfo>("json_file", "AST JSON output"),
                 new Option<string>("--mode", getDefaultValue: () => "clopen")
             }; 
             command.Description = "Parse a DM file";
@@ -74,12 +75,16 @@ namespace ClopenDream {
             return rootCommand.InvokeAsync(args).Result;
         }
 
-        static int ParseHandler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo empty_dir, FileInfo json_file, string mode) {
+        static int ParseHandler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir, FileInfo json_file, string mode) {
             DMASTFile ast;
             if (mode == "clopen") {
                 Console.WriteLine("clopen parse");
-                ast = ClopenParse(byond_codetree, empty_dir);
-                DMCompiler.Program.CompileAST(ast);
+                ast = ClopenParse(byond_codetree, working_dir);
+                //new DMCompiler.DM.Experimental.ASTTraveler().Travel(ast);
+                // DMCompiler.Program.CompileAST(ast);
+                //string outputFile = Path.ChangeExtension(dm_original.FullName, "json");
+                //List<DreamMapJson> maps = DMCompiler.Program.ConvertMaps(new() { Path.Combine(dm_original.DirectoryName, "map.dmm") } );
+                //DMCompiler.Program.SaveJson(maps, "map.dmi", outputFile);
             }
             else if (mode == "open") {
                 Console.WriteLine("open parse");
@@ -161,13 +166,13 @@ namespace ClopenDream {
             return ast;
         }
 
-        static DMASTFile ClopenParse(FileInfo byond_codetree, DirectoryInfo empty_dir, DMASTFile open_root = null, DirectoryInfo output_dir = null) {
+        static DMASTFile ClopenParse(FileInfo byond_codetree, DirectoryInfo working_dir, DMASTFile open_root = null, DirectoryInfo output_dir = null) {
             Parser p = new();
             Node root = p.BeginParse(byond_codetree.OpenText());
             root.FixLabels();
 
-            DMASTFile ast_empty = GetAST(Path.Combine(empty_dir.FullName, "empty.dm"));
-            FileInfo empty_code_tree = new FileInfo(Path.Combine(empty_dir.FullName, "empty-code-tree.txt"));
+            DMASTFile ast_empty = GetAST(Path.Combine(working_dir.FullName, "empty.dm"));
+            FileInfo empty_code_tree = new FileInfo(Path.Combine(working_dir.FullName, "empty.codetree.txt"));
             Node empty_root = p.BeginParse(empty_code_tree.OpenText());
             empty_root.FixLabels();
             new FixEmpty(empty_root, root).Begin();
@@ -223,9 +228,9 @@ namespace ClopenDream {
             }
             void DefineSearch(Node n, DMASTNode node) {
                 if (node is DMASTProcDefinition pd) {
-//                    if (pd.Name == "create_area") {
-//                        DMAST.Printer.Print(node, Console.Out);
-//                    }
+                    if (pd.ObjectPath.ToString().Contains("world") && pd.Name == "New") {
+                        //DMAST.Printer.Print(node, Console.Out);
+                    }
                 }
             }
             void DefineCompare(Node n, DMASTNode node) {

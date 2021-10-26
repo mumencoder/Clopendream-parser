@@ -52,6 +52,8 @@ namespace ClopenDream {
                 case "-=": return GetRightAssoc(n.Leaves, typeof(DMASTRemove));
                 case "|=": return GetRightAssoc(n.Leaves, typeof(DMASTCombine));
                 case "&=": return GetRightAssoc(n.Leaves, typeof(DMASTMask));
+                case "||=": return GetRightAssoc(n.Leaves, typeof(DMASTLogicalOrAssign));
+                case "&&=": return GetRightAssoc(n.Leaves, typeof(DMASTLogicalAndAssign));
                 case "*=": return GetRightAssoc(n.Leaves, typeof(DMASTMultiplyAssign));
                 case "/=": return GetRightAssoc(n.Leaves, typeof(DMASTDivideAssign));
                 case "<<=": return GetRightAssoc(n.Leaves, typeof(DMASTLeftShiftAssign));
