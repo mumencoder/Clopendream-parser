@@ -202,6 +202,9 @@ namespace ClopenDream {
                     if (node.Leaves.Count == 1) {
                         return new DMASTLocate(NullifyNull(GetExpression(node.Leaves[0])), null);
                     }
+                    if (node.Leaves.Count == 0) {
+                        return new DMASTLocate(null, null);
+                    }
                 }
                 if (proc_ident == "initial") {
                     return new DMASTInitial(GetExpression(node.Leaves[0]));

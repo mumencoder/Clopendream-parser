@@ -157,12 +157,33 @@ namespace ClopenDream {
         IEnumerable<DMASTObjectVarDefinition> GetObjectVarDefinitions(Node node) {
             if (node.Labels.Contains("PathTerminated")) {
                 pathStack.Push(node);
-                Node expr_node = node.UniqueBlank();
                 DMASTExpression expr = new DMASTConstantNull();
-                if (expr_node != null && expr_node.Labels.Contains("VarInit")) {
-                    expr = GetExpression(expr_node.Leaves[0]);
+                var index_modifier = false;
+                foreach (var subnode in node.Leaves) {
+                    var modnode = subnode.UniqueLeaf();
+                    if (modnode == null) {
+                        throw node.Error("null modifier");
+                    }
+                    if (modnode.Labels.Contains("VarInit")) {
+                        expr = GetExpression(modnode.Leaves[0]);
+                    }
+                    // TODO handle a sized array correctly
+                    else if (modnode.Labels.Contains("IndexModifier")) {
+                        index_modifier = true;
+                    }
+                    else if (modnode.Labels.Contains("AsModifier")) {
+                        // TODO handle this
+                    }
+                    else {
+                        throw node.Error("Unknown object var declaration modifier");
+                    }
+
                 }
-                var define = new DMASTObjectVarDefinition(ExtractPath(pathStack), expr);
+                var path = ExtractPath(pathStack);
+                var define = new DMASTObjectVarDefinition(path, expr);
+                if (index_modifier) {
+                    define.Type = new DreamPath("/list");
+                }
                 AssociateNodes(node, define);
                 VisitDefine(node, define);
                 yield return define;

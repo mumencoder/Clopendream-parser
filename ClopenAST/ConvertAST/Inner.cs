@@ -22,6 +22,9 @@ namespace ClopenDream {
                 if (path[0] == "null") {
                     return new DMASTConstantNull();
                 }
+                if (path[0] == "<expression>") {
+                    return derefExprStack.Peek();
+                }
                 return new DMASTIdentifier(path[0]);
             }
             if (path.Length > 1) {

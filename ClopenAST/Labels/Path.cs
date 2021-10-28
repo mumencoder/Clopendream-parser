@@ -23,15 +23,9 @@ namespace ClopenDream {
         }
 
         public bool CheckPathTerminator(Node node) {
-            if (node.Leaves.Count == 0) { return true; }
-            if (node.Leaves.Count == 1) {
-                if (Parse(CheckVarInit, node)) { return true; }
-                if (Parse(CheckAsModifier, node)) { return true; }
-                if (Parse(CheckIndexModifier, node)) { return true; }
-            }
-            else {
-                if (ParseLeaves(CheckIndexModifier, node)) { return true; }
-            }
+            if (Parse(CheckVarInit, node)) { return true; }
+            if (Parse(CheckAsModifier, node)) { return true; }
+            if (Parse(CheckIndexModifier, node)) { return true; }
             return Error();
         }
 

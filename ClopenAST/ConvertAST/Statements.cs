@@ -252,13 +252,34 @@ namespace ClopenDream {
         IEnumerable<DMASTProcStatementVarDeclaration> GetProcVarDefinitions(Node node) {
             if (node.Labels.Contains("PathTerminated")) {
                 procVarPathStack.Push(node);
-                Node expr_node = node.UniqueBlank();
-                DMASTExpression expr = null;
-                if (expr_node != null && expr_node.Labels.Contains("VarInit")) {
-                    expr = GetExpression(expr_node.Leaves[0]);
+                DMASTExpression expr = new DMASTConstantNull();
+                var index_modifier = false;
+                foreach (var subnode in node.Leaves) {
+                    var modnode = subnode.UniqueLeaf();
+                    if (modnode == null) {
+                        throw node.Error("null modifier");
+                    }
+                    if (modnode.Labels.Contains("VarInit")) {
+                        expr = GetExpression(modnode.Leaves[0]);
+                    }
+                    // TODO handle a sized array correctly
+                    else if (modnode.Labels.Contains("IndexModifier")) {
+                        index_modifier = true;
+                    }
+                    else if (modnode.Labels.Contains("AsModifier")) {
+                        // TODO handle this
+                    }
+                    else {
+                        throw node.Error("Unknown object var declaration modifier");
+                    }
+
                 }
                 var path = new DMASTPath(ExtractPath(procVarPathStack));
-                yield return new DMASTProcStatementVarDeclaration(path, expr);
+                var define = new DMASTProcStatementVarDeclaration(path, expr);
+                if (index_modifier) {
+                    define.Type = new OpenDreamShared.Dream.DreamPath("/list");
+                }
+                yield return define;
                 procVarPathStack.Pop();
             }
             else if (node.Labels.Contains("PathDecl") || node.Labels.Contains("ProcVarDeclStmt")) {

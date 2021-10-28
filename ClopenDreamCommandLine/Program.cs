@@ -80,8 +80,9 @@ namespace ClopenDream {
             if (mode == "clopen") {
                 Console.WriteLine("clopen parse");
                 ast = ClopenParse(byond_codetree, working_dir);
+                DMCompiler.Program.CompileAST(ast);
+
                 //new DMCompiler.DM.Experimental.ASTTraveler().Travel(ast);
-                // DMCompiler.Program.CompileAST(ast);
                 //string outputFile = Path.ChangeExtension(dm_original.FullName, "json");
                 //List<DreamMapJson> maps = DMCompiler.Program.ConvertMaps(new() { Path.Combine(dm_original.DirectoryName, "map.dmm") } );
                 //DMCompiler.Program.SaveJson(maps, "map.dmi", outputFile);
