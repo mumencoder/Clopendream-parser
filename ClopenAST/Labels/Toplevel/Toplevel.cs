@@ -38,6 +38,7 @@ namespace ClopenDream{
             return true;
         }
         bool CheckObjectDecl(Node node) {
+            FixKeywordUsage(node);
             foreach (var leaf in node.Leaves) {
                 if (Parse(CheckProcDecl, leaf)) { continue; }
                 if (Parse(CheckProcOverride, leaf)) { continue; }
@@ -51,5 +52,11 @@ namespace ClopenDream{
             return true;
         }
 
+        void FixKeywordUsage(Node node) {
+            if (node.Tags.ContainsKey("keyword")) {
+                node.Tags["bare"] = node.Tags["keyword"];
+                node.Tags.Remove("keyword");
+            }
+        }
     }
 }

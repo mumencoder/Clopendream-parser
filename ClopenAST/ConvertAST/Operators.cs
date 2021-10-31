@@ -72,6 +72,7 @@ namespace ClopenDream {
                 case "?:": return GetDerefOperator(n);
                 case "?.": return GetDerefOperator(n);
                 case "?.(lhs)": return GetDerefOperator(n);
+                case "?:(lhs)": return GetDerefOperator(n);
                 default: throw n.Error("GetOperator " + n.Tags["operator"]);
             }
         }

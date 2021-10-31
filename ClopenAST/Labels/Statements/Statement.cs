@@ -23,7 +23,7 @@ namespace ClopenDream {
             if (Parse(CheckExplicitBlock, node)) { return true; }
             if (Parse(CheckExpressionStmt, node)) { return true; }
             if (Parse(CheckImplicitBlock, node)) { return true; }
-            if (Parse(CheckParentDecl, node)) { node.Tags["warning"] = "parentdecl as proc statement";  return true; }
+            if (Parse(CheckParentDecl, node)) { System.Console.WriteLine("warning: parentdecl as proc statement"); return true; }
             return false;
         }
 

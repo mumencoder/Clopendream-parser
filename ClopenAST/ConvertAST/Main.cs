@@ -30,7 +30,10 @@ namespace ClopenDream {
                 }
                 return strs[0];
             }
-            throw new Exception();
+            if (n.Tags.ContainsKey("overload")) {
+                return (string)n.Tags["operator"];
+            }
+            throw n.Error("bad node path");
         }
 
         OpenDreamShared.Dream.Procs.DMValueType ConvertDMValueType(Node n) {

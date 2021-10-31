@@ -26,6 +26,7 @@ namespace ClopenDream {
             if (Parse(CheckVarInit, node)) { return true; }
             if (Parse(CheckAsModifier, node)) { return true; }
             if (Parse(CheckIndexModifier, node)) { return true; }
+            if (Parse(CheckInModifier, node)) { return true; }
             return Error();
         }
 

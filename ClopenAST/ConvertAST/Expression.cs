@@ -99,6 +99,9 @@ namespace ClopenDream {
                         return new DMASTNewDereference(deref_expr, paras);
                     }
                 }
+                else if (node.Leaves[0].Labels.Contains("SelfExpression")) {
+                    return new DMASTNewIdentifier(new DMASTIdentifier("."), paras);
+                }
                 else {
                     throw node.Error("GetExpression.NewExpression");
                 }
@@ -163,6 +166,10 @@ namespace ClopenDream {
                 return new DMASTConstantNull();
             }
             if (node.Labels.Contains("BuiltinExpression")) {
+                if (node.Tags.ContainsKey("special")) {
+                    Console.WriteLine("warning: global vars");
+                    return new DMASTConstantNull();
+                }
                 string proc_ident = (string)node.Tags["bare"];
                 if (proc_ident == "istype") {
                     if (node.Leaves.Count == 1) {
