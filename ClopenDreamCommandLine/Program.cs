@@ -20,9 +20,9 @@ namespace ClopenDream {
 
             var command = new Command("parse") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
-                new Argument<FileInfo>("dm_original", "Original DM file"),
-                new Argument<DirectoryInfo>("working_dir", "Directory containing empty.dm"),
-                new Option<FileInfo>("json_file", "AST JSON output"),
+                new Option<FileInfo>("--dm_original", "Original DM file"),
+                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
+                new Option<FileInfo>("--json_file", "AST JSON output"),
                 new Option<string>("--mode", getDefaultValue: () => "clopen")
             }; 
             command.Description = "Parse a DM file";

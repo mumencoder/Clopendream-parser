@@ -1,0 +1,8 @@
+
+Usage:
+
+Generate a code tree for empty.dm and move the result into a working directory
+
+Generate a code tree file for your DM project
+
+Run: ClopenDreamCommandLine parse <project code tree> --working_dir <working directory>
