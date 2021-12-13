@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using OpenDreamShared.Dream;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {

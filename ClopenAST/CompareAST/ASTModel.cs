@@ -1,7 +1,5 @@
 ﻿
-using OpenDreamShared.Dream;
-using OpenDreamShared.Dream.Procs;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     class ASTModel {

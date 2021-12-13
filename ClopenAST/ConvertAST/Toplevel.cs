@@ -1,8 +1,7 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Collections.Generic;
 using OpenDreamShared.Dream;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -11,7 +10,7 @@ namespace ClopenDream {
 
         public DMASTFile GetFile(Node root) {
             pathStack = new();
-            return new DMASTFile(GetBlockInner(root.Leaves));
+            return new DMASTFile(root.Location, GetBlockInner(root.Leaves));
         }
 
         DMASTBlockInner GetBlockInner(List<Node> nodes) {
@@ -19,12 +18,12 @@ namespace ClopenDream {
             foreach (var leaf in nodes) {
                 stmts.AddRange(GetStatements(leaf));
             }
-            return new DMASTBlockInner(stmts.ToArray());
+            return new DMASTBlockInner(nodes[0].Location, stmts.ToArray());
         }
         IEnumerable<DMASTStatement> GetStatements(Node node) {
             if (node.Labels.Contains("ObjectDecl")) {
                 pathStack.Push(node);
-                yield return new DMASTObjectDefinition(ExtractPath(pathStack), GetBlockInner(node.Leaves));
+                yield return new DMASTObjectDefinition(node.Location, ExtractPath(pathStack), GetBlockInner(node.Leaves));
                 pathStack.Pop();
             }
             else if (node.Labels.Contains("ObjectVarDecl")) {
@@ -48,7 +47,7 @@ namespace ClopenDream {
             }
             else if (node.Labels.Contains("ObjectAssignStmt")) {
                 pathStack.Push(node.Leaves[0]);
-                var define = new DMASTObjectVarOverride(ExtractPath(pathStack), GetExpression(node.Leaves[1]));
+                var define = new DMASTObjectVarOverride(node.Location, ExtractPath(pathStack), GetExpression(node.Leaves[1]));
                 AssociateNodes(node, define);
                 VisitDefine(node, define);
                 yield return define;
@@ -74,7 +73,7 @@ namespace ClopenDream {
             if (n.Leaves.Count == 1) {
                 body = null;
             }
-            var procdef = new DMASTProcDefinition(path, GetProcParameters(n.Leaves[0]), body);
+            var procdef = new DMASTProcDefinition(n.Location, path, GetProcParameters(n.Leaves[0]), body);
             AssociateNodes(n, procdef);
             VisitDefine(n, procdef);
             pathStack.Pop();
@@ -122,11 +121,11 @@ namespace ClopenDream {
                     }
                 }
             }
-            return new DMASTDefinitionParameter(new DMASTPath(path), varinit_expr, val_type, possible_vals);
+            return new DMASTDefinitionParameter(n.Location, new DMASTPath(n.Location, path), varinit_expr, val_type, possible_vals);
         }
 
         DMASTProcBlockInner GetProcBlockInner(List<Node> nodes) {
-            return new DMASTProcBlockInner(GetProcStatements(nodes).ToArray());
+            return new DMASTProcBlockInner(nodes[0].Location, GetProcStatements(nodes).ToArray());
         }
 
         DMASTExpression GetVarInit(Node node) {
@@ -157,7 +156,7 @@ namespace ClopenDream {
         IEnumerable<DMASTObjectVarDefinition> GetObjectVarDefinitions(Node node) {
             if (node.Labels.Contains("PathTerminated")) {
                 pathStack.Push(node);
-                DMASTExpression expr = new DMASTConstantNull();
+                DMASTExpression expr = new DMASTConstantNull(node.Location);
                 var index_modifier = false;
                 foreach (var subnode in node.Leaves) {
                     var modnode = subnode.UniqueLeaf();
@@ -180,10 +179,11 @@ namespace ClopenDream {
 
                 }
                 var path = ExtractPath(pathStack);
-                var define = new DMASTObjectVarDefinition(path, expr);
-                if (index_modifier) {
-                    define.Type = new DreamPath("/list");
+                if (index_modifier)
+                {
+                    path = new OpenDreamShared.Dream.DreamPath($"var/list/{node.Tags["bare"]}");
                 }
+                var define = new DMASTObjectVarDefinition(node.Location, path, expr);
                 AssociateNodes(node, define);
                 VisitDefine(node, define);
                 yield return define;

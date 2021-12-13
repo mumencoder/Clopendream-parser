@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using OpenDreamShared.Dream;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -19,14 +18,14 @@ namespace ClopenDream {
                     expr = GetExpression(node.Leaves[1]);
                 }
                 else {
-                    expr = new DMASTAssign(GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]));
+                    expr = new DMASTAssign(node.Location, GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]));
                 }
             }
             else {
                 expr = GetExpression(node);
             }
             // note names can be escaped?
-            return new DMASTCallParameter(expr, EscapeString(name));
+            return new DMASTCallParameter(node.Location, expr, EscapeString(name));
         }
 
         DMASTCallParameter[] GetCallParameters(List<Node> nodes) {

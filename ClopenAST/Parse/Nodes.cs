@@ -6,22 +6,12 @@ using System.Linq;
 
 namespace ClopenDream {
 
-    public class Location {
-        public string Sourcefile { get; set; }
-        public int Line { get; set; }
-
-        public Location(string sourcefile, int line) {
-            Sourcefile = sourcefile;
-            Line = line;
-        }
-    }
-
     public class Node {
         [JsonIgnore]
         public int Indent { get; set; }
 
         [JsonIgnore]
-        public Location Location { get; set; }
+        public OpenDreamShared.Compiler.Location Location { get; set; }
 
         [JsonIgnore]
         public int RawLine { get; set; }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using OpenDreamShared.Compiler;
 
 namespace ClopenDream {
 
@@ -71,11 +72,11 @@ namespace ClopenDream {
                 skipws();
 
                 var lpos = _cPos;
-                Location l = ReadLocation();
+                Location? l = ReadLocation();
                 if (l == null) {
                     Console.WriteLine("bad location " + _cLineNumber + " |" + _cText.Substring(lpos));
                 }
-                cNode.Location = l;
+                cNode.Location = l.Value;
                 cNode.RawLine = _cLineNumber;
                 cNode.Text = _cText;
                 cNode.Indent = indent;
@@ -356,7 +357,7 @@ namespace ClopenDream {
             }
             return null;
         }
-        public Location ReadLocation() {
+        public OpenDreamShared.Compiler.Location? ReadLocation() {
             if (getc() != '[') {
                 return null;
             }
@@ -375,7 +376,7 @@ namespace ClopenDream {
             if (getc() != ']') { return null; }
             int line = int.Parse( _cText.Substring(linestart, _cPos - linestart) );
 
-            return new Location(text, line);
+            return new OpenDreamShared.Compiler.Location(text, line, null);
         }
 
     }

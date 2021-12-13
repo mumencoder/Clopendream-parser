@@ -2,13 +2,14 @@
 
   <PropertyGroup>
 	  <OutputType>Library</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <ApplicationIcon />
     <StartupObject />
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OpenDream\DMCompiler\DMCompiler.csproj" />
+    <ProjectReference Include="..\OpenDream\OpenDreamShared\OpenDreamShared.csproj" />
   </ItemGroup>
 
 </Project>

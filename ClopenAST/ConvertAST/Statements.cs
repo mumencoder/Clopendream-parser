@@ -1,7 +1,6 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Collections.Generic;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -23,7 +22,7 @@ namespace ClopenDream {
                         cnode += 1;
                         else_block = GetProcBlockInner(elsebody.Leaves);
                     }
-                    yield return new DMASTProcStatementIf(GetExpression(node.Leaves[0]), if_block, else_block);
+                    yield return new DMASTProcStatementIf(node.Location, GetExpression(node.Leaves[0]), if_block, else_block);
 
                 }
                 else if (node.Labels.Contains("SwitchStmt")) {
@@ -40,7 +39,7 @@ namespace ClopenDream {
                                 if (switch_if_header.Leaves[0].Tags.ContainsKey("blank")) {
                                     var maybe_to = switch_if_header.Leaves[0].IgnoreBlank();
                                     if (maybe_to.CheckTag("operator", "to")) {
-                                        var switch_range = new DMASTSwitchCaseRange(GetExpression(maybe_to.Leaves[0]), GetExpression(maybe_to.Leaves[1]));
+                                        var switch_range = new DMASTSwitchCaseRange(node.Location, GetExpression(maybe_to.Leaves[0]), GetExpression(maybe_to.Leaves[1]));
                                         cases.Add(new DMASTProcStatementSwitch.SwitchCaseValues(new DMASTExpression[1] { switch_range }, GetProcBlockInner(switch_if_body.Leaves)));
                                         switch_cnode += 2;
                                         continue;
@@ -63,11 +62,11 @@ namespace ClopenDream {
                             }
                         }
                     }
-                    yield return new DMASTProcStatementSwitch(GetExpression(node.Leaves[0]), cases.ToArray());
+                    yield return new DMASTProcStatementSwitch(node.Location, GetExpression(node.Leaves[0]), cases.ToArray());
                 }
                 else if (node.Labels.Contains("SpawnStmt")) {
                     cnode += 1;
-                    DMASTExpression expr = new DMASTConstantInteger(0);
+                    DMASTExpression expr = new DMASTConstantInteger(node.Location, 0);
                     DMASTProcBlockInner body = null;
                     if (node.Leaves.Count > 0) {
                         if (node.Leaves.Count != 1) {
@@ -80,7 +79,7 @@ namespace ClopenDream {
                         cnode += 1;
                         body = GetProcBlockInner(spawnbody.Leaves);
                     }
-                    yield return new DMASTProcStatementSpawn(expr, body);
+                    yield return new DMASTProcStatementSpawn(node.Location, expr, body);
                 }
                 else if (node.Labels.Contains("TryStmt")) {
                     DMASTProcBlockInner trybody = null;
@@ -102,7 +101,7 @@ namespace ClopenDream {
                         throw catchnode.Error("expected CatchStmt");
                     }
                     if (catchnode.Leaves.Count > 0) {
-                        catchexpr = new DMASTProcStatementExpression(GetExpression(catchnode.Leaves[0]));
+                        catchexpr = new DMASTProcStatementExpression(node.Location, GetExpression(catchnode.Leaves[0]));
                     }
                     cnode += 1;
                     catchnode = catchnode.Next();
@@ -111,7 +110,7 @@ namespace ClopenDream {
                     }
                     cnode += 1;
                     catchbody = GetProcBlockInner(node.Leaves);
-                    yield return new DMASTProcStatementTryCatch(trybody, catchbody, catchexpr);
+                    yield return new DMASTProcStatementTryCatch(node.Location, trybody, catchbody, catchexpr);
 
                 }
                 else if (node.Labels.Contains("ThrowStmt")) {
@@ -120,7 +119,7 @@ namespace ClopenDream {
                     if (node.Leaves.Count > 0) {
                         expr = GetExpression(node.Leaves[0]);
                     }
-                    yield return new DMASTProcStatementThrow(expr);
+                    yield return new DMASTProcStatementThrow(node.Location, expr);
                 }
                 else if (node.Labels.Contains("ReturnStmt")) {
                     cnode += 1;
@@ -131,7 +130,7 @@ namespace ClopenDream {
                     if (node.Leaves.Count == 1) {
                         expr = GetExpression(node.Leaves[0]);
                     }
-                    yield return new DMASTProcStatementReturn(expr);
+                    yield return new DMASTProcStatementReturn(node.Location, expr);
                 }
                 else if (node.Labels.Contains("ProcVarDeclStmt")) {
                     var (for_stmt, new_cnode) = InitializedForLoop(nodes, cnode);
@@ -166,7 +165,7 @@ namespace ClopenDream {
                         cnode += 1;
                         while_body = GetProcBlockInner(while_body_node.Leaves);
                     }
-                    yield return new DMASTProcStatementWhile(cond, while_body);
+                    yield return new DMASTProcStatementWhile(node.Location, cond, while_body);
                 }
                 else if (node.Labels.Contains("DoWhileStmt")) {
                     cnode += 1;
@@ -178,32 +177,29 @@ namespace ClopenDream {
                         cnode += 1;
                         while_cond = GetExpression(while_cond_node.Leaves[0]);
                     }
-                    yield return new DMASTProcStatementDoWhile(while_cond, while_body);
+                    yield return new DMASTProcStatementDoWhile(node.Location, while_cond, while_body);
                 }
                 else if (node.Labels.Contains("SetStmt")) {
                     cnode += 1;
                     var ident = (DMASTIdentifier)GetExpression(node.Leaves[0].Leaves[0]);
-                    yield return new DMASTProcStatementSet(ident.Identifier, GetExpression(node.Leaves[0].Leaves[1]));
+                    yield return new DMASTProcStatementSet(node.Location, ident.Identifier, GetExpression(node.Leaves[0].Leaves[1]));
                 }
                 else if (node.Labels.Contains("ContinueStmt")) {
                     cnode += 1;
-                    yield return new DMASTProcStatementContinue();
+                    yield return new DMASTProcStatementContinue(node.Location);
                 }
                 else if (node.Labels.Contains("BreakStmt")) {
                     cnode += 1;
-                    yield return new DMASTProcStatementBreak();
+                    yield return new DMASTProcStatementBreak(node.Location);
                 }
                 else if (node.Labels.Contains("GotoStmt")) {
                     cnode += 1;
                     string[] labels = node.Tags["deref"] as string[];
-                    yield return new DMASTProcStatementGoto(new DMASTIdentifier(labels[0]));
+                    yield return new DMASTProcStatementGoto(node.Location, new DMASTIdentifier(node.Location, labels[0]));
                 }
                 else if (node.Labels.Contains("LabeledBlock")) {
                     cnode += 1;
-                    yield return new DMASTProcStatementLabel(node.Tags["block"] as string);
-                    foreach (var stmt in GetProcStatements(node.Leaves)) {
-                        yield return stmt;
-                    }
+                    yield return new DMASTProcStatementLabel(node.Location, node.Tags["block"] as string, GetProcBlockInner(node.Leaves));
                 }
                 else if (node.Labels.Contains("ExplicitBlock")) {
                     cnode += 1;
@@ -213,10 +209,7 @@ namespace ClopenDream {
                 }
                 else if (node.Labels.Contains("ImplicitBlock")) {
                     cnode += 1;
-                    yield return new DMASTProcStatementLabel(node.Tags["block"] as string);
-                    foreach (var stmt in GetProcStatements(node.Leaves)) {
-                        yield return stmt;
-                    }
+                    yield return new DMASTProcStatementLabel(node.Location, node.Tags["block"] as string, GetProcBlockInner(node.Leaves));
                 }
                 else if (node.Labels.Contains("ParentDecl")) {
                     cnode += 1;
@@ -231,20 +224,20 @@ namespace ClopenDream {
                                 var browse_node = rnode.Leaves[0];
                                 var receiver = GetExpression(node.Leaves[0]);
                                 if (browse_node.Tags.ContainsKey("bare") && browse_node.Tags["bare"] as string == "browse") {
-                                    yield return new DMASTProcStatementBrowse(receiver, GetExpression(browse_node.Leaves[0]), GetExpression(browse_node.Leaves[1]));
+                                    yield return new DMASTProcStatementBrowse(node.Location, receiver, GetExpression(browse_node.Leaves[0]), GetExpression(browse_node.Leaves[1]));
                                     continue;
                                 }
                                 else if (browse_node.Tags.ContainsKey("bare") && browse_node.Tags["bare"] as string == "browse_rsc") {
                                     if (browse_node.Leaves.Count == 1) {
-                                        yield return new DMASTProcStatementBrowseResource(receiver, GetExpression(browse_node.Leaves[0]), null);
+                                        yield return new DMASTProcStatementBrowseResource(node.Location, receiver, GetExpression(browse_node.Leaves[0]), null);
                                     }
                                     else {
-                                        yield return new DMASTProcStatementBrowseResource(receiver, GetExpression(browse_node.Leaves[0]), GetExpression(browse_node.Leaves[1]));
+                                        yield return new DMASTProcStatementBrowseResource(node.Location, receiver, GetExpression(browse_node.Leaves[0]), GetExpression(browse_node.Leaves[1]));
                                     }
                                     continue;
                                 }
                                 else if (browse_node.Tags.ContainsKey("bare") && browse_node.Tags["bare"] as string == "output") {
-                                    yield return new DMASTProcStatementOutputControl(receiver, GetExpression(browse_node.Leaves[0]), GetExpression(browse_node.Leaves[1]));
+                                    yield return new DMASTProcStatementOutputControl(node.Location, receiver, GetExpression(browse_node.Leaves[0]), GetExpression(browse_node.Leaves[1]));
                                     continue;
                                 }
                             }
@@ -253,11 +246,11 @@ namespace ClopenDream {
                     if (node.Labels.Contains("BuiltinExpression")) {
                         string proc_ident = (string)node.Tags["bare"];
                         if (proc_ident == "del") {
-                            yield return new DMASTProcStatementDel(GetExpression(node.Leaves[0]));
+                            yield return new DMASTProcStatementDel(node.Location, GetExpression(node.Leaves[0]));
                             continue;
                         }
                     }
-                    yield return new DMASTProcStatementExpression(GetExpression(node));
+                    yield return new DMASTProcStatementExpression(node.Location, GetExpression(node));
                 }
             }
         }
@@ -266,7 +259,7 @@ namespace ClopenDream {
         IEnumerable<DMASTProcStatementVarDeclaration> GetProcVarDefinitions(Node node) {
             if (node.Labels.Contains("PathTerminated")) {
                 procVarPathStack.Push(node);
-                DMASTExpression expr = new DMASTConstantNull();
+                DMASTExpression expr = new DMASTConstantNull(node.Location);
                 var index_modifier = false;
                 foreach (var subnode in node.Leaves) {
                     var modnode = subnode.UniqueLeaf();
@@ -291,11 +284,12 @@ namespace ClopenDream {
                     }
 
                 }
-                var path = new DMASTPath(ExtractPath(procVarPathStack));
-                var define = new DMASTProcStatementVarDeclaration(path, expr);
-                if (index_modifier) {
-                    define.Type = new OpenDreamShared.Dream.DreamPath("/list");
+                var path = new DMASTPath(node.Location, ExtractPath(procVarPathStack));
+                if (index_modifier)
+                {
+                    path = new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath($"var/list/{node.Tags["bare"]}") );
                 }
+                var define = new DMASTProcStatementVarDeclaration(node.Location, path, expr);
                 yield return define;
                 procVarPathStack.Pop();
             }
@@ -358,7 +352,7 @@ namespace ClopenDream {
                         cnode += 1;
                         for_body = GetProcBlockInner(for_body_node.Leaves);
                     }
-                    return (new DMASTProcStatementForStandard(init, compa, incr, for_body), cnode);
+                    return (new DMASTProcStatementForStandard(for_node.Location, init, compa, incr, for_body), cnode);
                 }
                 if (for_node.Leaves.Count == 1) {
                     var for_expr = for_node.Leaves[0].IgnoreBlank();
@@ -388,29 +382,29 @@ namespace ClopenDream {
                             if (to_expr.CheckTag("operator", "to")) {
                                 var range_start = GetExpression(to_expr.Leaves[0]);
                                 var range_end = GetExpression(to_expr.Leaves[1]);
-                                DMASTExpression range_step = new DMASTConstantInteger(1);
+                                DMASTExpression range_step = new DMASTConstantInteger(for_node.Location, 1);
                                 if (to_expr.Leaves.Count == 3) {
                                     range_step = GetExpression(to_expr.Leaves[2]);
                                 }
                                 if (for_expr.CheckTag("operator", "=")) {
                                     if (initializer == null) {
-                                        for_init = new DMASTProcStatementExpression(new DMASTAssign(GetExpression(for_expr.Leaves[0]), range_start));
+                                        for_init = new DMASTProcStatementExpression(for_node.Location, new DMASTAssign(for_node.Location, GetExpression(for_expr.Leaves[0]), range_start));
                                     }
                                     else {
                                         initializer.Value = range_start;
                                         for_init = initializer;
                                     }
                                 }
-                                return (new DMASTProcStatementForRange(for_init, new DMASTIdentifier(for_name[0]),
+                                return (new DMASTProcStatementForRange(for_node.Location, for_init, new DMASTIdentifier(for_node.Location, for_name[0]),
                                     range_start, range_end, range_step, body), cnode);
                             }
                             else {
-                                return (new DMASTProcStatementForList(for_init, new DMASTIdentifier(for_name[0]),
-                                    GetExpression(for_expr.Leaves[1]), body, dm_type), cnode);
+                                return (new DMASTProcStatementForList(for_node.Location, for_init, new DMASTIdentifier(for_node.Location, for_name[0]),
+                                    GetExpression(for_expr.Leaves[1]), body), cnode);
                             }
                         }
                         var list_expr = GetExpression(for_expr.Leaves[1]);
-                        return (new DMASTProcStatementForList(initializer, new DMASTIdentifier(for_name[0]), list_expr, body, dm_type), cnode);
+                        return (new DMASTProcStatementForList(for_node.Location, initializer, new DMASTIdentifier(for_node.Location, for_name[0]), list_expr, body), cnode);
                     }
                     else {
                         var body_node = for_node.Next();
@@ -419,7 +413,7 @@ namespace ClopenDream {
                             cnode += 1;
                             body = GetProcBlockInner(body_node.Leaves);
                         }
-                        return (new DMASTProcStatementFor(new DMASTProcStatementExpression(GetExpression(for_expr)), body), cnode); 
+                        return (new DMASTProcStatementFor(for_node.Location, new DMASTProcStatementExpression(for_node.Location, GetExpression(for_expr)), body), cnode); 
                     }
                 }
                 throw for_node.Error("invalid for loop");

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
-using OpenDreamShared.Dream;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -11,15 +9,15 @@ namespace ClopenDream {
         DMASTExpression GetOperator(Node n) {
             switch (n.Tags["operator"]) {
                 case "?": {
-                        if (n.Leaves.Count == 3) { return new DMASTTernary(GetExpression(n.Leaves[0]), GetExpression(n.Leaves[1]), GetExpression(n.Leaves[2])); }
+                        if (n.Leaves.Count == 3) { return new DMASTTernary(n.Location, GetExpression(n.Leaves[0]), GetExpression(n.Leaves[1]), GetExpression(n.Leaves[2])); }
                         throw n.Error("GetOperator.?");
                     }
                 case "!": {
-                        if (n.Leaves.Count == 1) { return new DMASTNot(GetExpression(n.Leaves[0])); }
+                        if (n.Leaves.Count == 1) { return new DMASTNot(n.Location, GetExpression(n.Leaves[0])); }
                         throw n.Error("GetOperator.~");
                     }
                 case "~": { 
-                        if (n.Leaves.Count == 1) { return new DMASTBinaryNot(GetExpression(n.Leaves[0])); }
+                        if (n.Leaves.Count == 1) { return new DMASTBinaryNot(n.Location, GetExpression(n.Leaves[0])); }
                         throw n.Error("GetOperator.~");
                     }
                 case "&": return GetLeftAssoc(n.Leaves, typeof(DMASTBinaryAnd));
@@ -29,7 +27,7 @@ namespace ClopenDream {
                 case "||": return GetLeftAssoc(n.Leaves, typeof(DMASTOr));
                 case "+": return GetLeftAssoc(n.Leaves, typeof(DMASTAdd));
                 case "-": {
-                        if (n.Leaves.Count == 1) { return new DMASTNegate(GetExpression(n.Leaves[0])); }
+                        if (n.Leaves.Count == 1) { return new DMASTNegate(n.Location, GetExpression(n.Leaves[0])); }
                         else if (n.Leaves.Count > 1) { return GetLeftAssoc(n.Leaves, typeof(DMASTSubtract)); }
                         throw n.Error("GetOperator.-");
                     }
@@ -60,14 +58,14 @@ namespace ClopenDream {
                 case ">>=": return GetRightAssoc(n.Leaves, typeof(DMASTRightShiftAssign));
                 case "^=": return GetRightAssoc(n.Leaves, typeof(DMASTXorAssign));
                 case "%=": return GetRightAssoc(n.Leaves, typeof(DMASTModulusAssign));
-                case "in": return new DMASTExpressionIn(GetExpression(n.Leaves[0]), GetExpression(n.Leaves[1]));
+                case "in": return new DMASTExpressionIn(n.Location, GetExpression(n.Leaves[0]), GetExpression(n.Leaves[1]));
                 case "to": return null;
                 case "step": {
                         var paras = GetCallParameters(n.Leaves);
-                        return new DMASTProcCall(new DMASTCallableProcIdentifier("step"), paras.ToArray());
+                        return new DMASTProcCall(n.Location, new DMASTCallableProcIdentifier(n.Location, "step"), paras.ToArray());
                     }
-                case "++": return new DMASTPreIncrement(GetExpression(n.Leaves[0]));
-                case "--": return new DMASTPreDecrement(GetExpression(n.Leaves[0]));
+                case "++": return new DMASTPreIncrement(n.Location, GetExpression(n.Leaves[0]));
+                case "--": return new DMASTPreDecrement(n.Location, GetExpression(n.Leaves[0]));
                 case ".": return GetDerefOperator(n);
                 case "?:": return GetDerefOperator(n);
                 case "?.": return GetDerefOperator(n);

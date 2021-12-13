@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using OpenDreamShared.Dream;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -20,12 +18,12 @@ namespace ClopenDream {
             }
             if (path.Length == 1) {
                 if (path[0] == "null") {
-                    return new DMASTConstantNull();
+                    return new DMASTConstantNull(node.Location);
                 }
                 if (path[0] == "<expression>") {
                     return derefExprStack.Peek();
                 }
-                return new DMASTIdentifier(path[0]);
+                return new DMASTIdentifier(node.Location, path[0]);
             }
             if (path.Length > 1) {
                 var ident = path[0];
@@ -36,17 +34,17 @@ namespace ClopenDream {
                     conditional = derefExprCond.Peek();
                 }
                 else {
-                    expr = new DMASTIdentifier(ident);
+                    expr = new DMASTIdentifier(node.Location, ident);
                 }
 
                 int pos = 1;
                 while (pos < path.Length) {
                     if (path[pos] == ".") {
-                        expr = new DMASTDereference(expr, path[pos + 1], DMASTDereference.DereferenceType.Direct, conditional);
+                        expr = new DMASTDereference(node.Location, expr, path[pos + 1], DMASTDereference.DereferenceType.Direct, conditional);
                         conditional = false;
                     }
                     else if (path[pos] == ":") {
-                        expr = new DMASTDereference(expr, path[pos + 1], DMASTDereference.DereferenceType.Search, conditional);
+                        expr = new DMASTDereference(node.Location, expr, path[pos + 1], DMASTDereference.DereferenceType.Search, conditional);
                         conditional = false;
                     }
                     else {
@@ -63,10 +61,10 @@ namespace ClopenDream {
             if (node.Tags.ContainsKey("expr")) {
                 var v = node.Tags["expr"] as string;
                 if (v == ".") {
-                    return new DMASTCallableSelf();
+                    return new DMASTCallableSelf(node.Location);
                 }
                 else if (v == "..") {
-                    return new DMASTCallableSuper();
+                    return new DMASTCallableSuper(node.Location);
                 }
                 else { throw node.Error("unknown expr tag"); }
             }
@@ -74,20 +72,20 @@ namespace ClopenDream {
                 return ConvertDeref(node);
             }
             if (node.Tags.ContainsKey("num")) {
-                return ConvertNumericLiteral((string)node.Tags["num"]);
+                return ConvertNumericLiteral(node, (string)node.Tags["num"]);
                     
             }
             if (node.Tags.ContainsKey("resource")) {
-                return new DMASTConstantResource(node.Tags["resource"] as string);
+                return new DMASTConstantResource(node.Location, node.Tags["resource"] as string);
             }
             if (node.Tags.ContainsKey("path")) {
                 // TODO double check paths with .proc in them
                 var path = string.Join("", node.Tags["path"] as string[]);
-                return new DMASTConstantPath(new DMASTPath( new DreamPath(path)));
+                return new DMASTConstantPath(node.Location, new DMASTPath(node.Location, new DreamPath(path)));
 
             }
             if (node.Tags.ContainsKey("string")) {
-                return new DMASTConstantString(EscapeString(node.Tags["string"] as string));
+                return new DMASTConstantString(node.Location, EscapeString(node.Tags["string"] as string));
 
             }
             if (node.Leaves.Count == 0) {
@@ -101,10 +99,10 @@ namespace ClopenDream {
             if (node.Tags.ContainsKey("expr")) {
                 var v = node.Tags["expr"] as string;
                 if (v == ".") {
-                    return new DMASTCallableSelf();
+                    return new DMASTCallableSelf(node.Location);
                 }
                 else if (v == "..") {
-                    return new DMASTCallableSuper();
+                    return new DMASTCallableSuper(node.Location);
                 }
                 else { throw node.Error("unknown expr tag"); }
             }
@@ -118,10 +116,10 @@ namespace ClopenDream {
             if (node.Tags.ContainsKey("expr")) {
                 var v = node.Tags["expr"] as string;
                 if (v == ".") {
-                    return new DMASTCallableSelf();
+                    return new DMASTCallableSelf(node.Location);
                 }
                 else if (v == "..") {
-                    return new DMASTCallableSuper();
+                    return new DMASTCallableSuper(node.Location);
                 }
                 else { throw node.Error("unknown expr tag"); }
             }
@@ -129,10 +127,10 @@ namespace ClopenDream {
                 var expr = ConvertDeref(node);
 
                 if (expr is DMASTIdentifier idexpr) {
-                    return new DMASTCallableProcIdentifier(idexpr.Identifier);
+                    return new DMASTCallableProcIdentifier(node.Location, idexpr.Identifier);
                 }
                 else if (expr is DMASTDereference deref_expr) {
-                    return new DMASTDereferenceProc(deref_expr.Expression, deref_expr.Property, deref_expr.Type, deref_expr.Conditional);
+                    return new DMASTDereferenceProc(node.Location, deref_expr.Expression, deref_expr.Property, deref_expr.Type, deref_expr.Conditional);
                 }
                 else {
                     throw node.Error("no callable created");;

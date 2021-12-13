@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Dream.Procs;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public class ASTCompare {
@@ -155,7 +155,7 @@ namespace ClopenDream {
                     if (lo.Length != hi.Length) {
                         for (int i = lo.Length; i < hi.Length; i++) {
                             var extra = hi.GetValue(i) as DMASTNode;
-                            if (!Compare(extra, new DMASTCallParameter(new DMASTConstantNull()), cr)) {
+                            if (!Compare(extra, new DMASTCallParameter(new OpenDreamShared.Compiler.Location(), new DMASTConstantNull(new OpenDreamShared.Compiler.Location())), cr)) {
                                 cr(new(al, ar, "array length mistmatch", extra));
                                 return false;
                             }

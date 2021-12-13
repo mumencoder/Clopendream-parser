@@ -1,8 +1,8 @@
 ﻿
 using System;
 using System.Linq;
-using OpenDreamShared.Compiler.DM;
 using OpenDreamShared.Dream;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -11,20 +11,20 @@ namespace ClopenDream {
             return new DreamPath(path_elements.Aggregate((s1, s2) => s1 + s2));
         }
 
-        DMASTExpression ConvertNumericLiteral(string n) {
+        DMASTExpression ConvertNumericLiteral(Node node, string s) {
             try {
-                return new DMASTConstantInteger(int.Parse(n));
+                return new DMASTConstantInteger(node.Location, int.Parse(s));
             }
             catch (FormatException) { }
             try {
-                return new DMASTConstantFloat(float.Parse(n));
+                return new DMASTConstantFloat(node.Location, float.Parse(s));
             }
             catch (FormatException) { }
-            if (n == "inf") {
-                return new DMASTConstantFloat(float.PositiveInfinity);
+            if (s == "inf") {
+                return new DMASTConstantFloat(node.Location, float.PositiveInfinity);
             }
-            if (n == "-inf") {
-                return new DMASTConstantFloat(float.NegativeInfinity);
+            if (s == "-inf") {
+                return new DMASTConstantFloat(node.Location, float.NegativeInfinity);
             }
             throw new Exception("GetExpression.NumericLiteral");
         }

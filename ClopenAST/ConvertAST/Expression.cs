@@ -1,9 +1,8 @@
-﻿using OpenDreamShared.Compiler.DM;
-using OpenDreamShared.Dream;
-using OpenDreamShared.Dream.Procs;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using OpenDreamShared.Dream.Procs;
+using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -12,11 +11,11 @@ namespace ClopenDream {
                 node = node.IgnoreBlank();
             }
             if (node.Labels.Contains("NumericLiteral")) {
-                return ConvertNumericLiteral((string)node.Tags["numeric"]); 
+                return ConvertNumericLiteral(node, (string)node.Tags["numeric"]); 
             }
             if (node.Labels.Contains("StringLiteral")) {
                 if (node.Leaves.Count == 0) {
-                    return new DMASTConstantString(EscapeString((string)node.Tags["string"]));
+                    return new DMASTConstantString(node.Location, EscapeString((string)node.Tags["string"]));
                 }
                 else {
                     var paras = node.Leaves.Select((n) => GetExpression(n)).ToArray();
@@ -25,15 +24,15 @@ namespace ClopenDream {
                             paras[i] = null;
                         }
                     }
-                    return new DMASTStringFormat(EscapeString(FormatText(node.Tags["string"] as string)), paras);
+                    return new DMASTStringFormat(node.Location, EscapeString(FormatText(node.Tags["string"] as string)), paras);
                 }
 
             }
             if (node.Labels.Contains("ResourceLiteral")) {
-                return new DMASTConstantResource(node.Tags["resource"] as string);
+                return new DMASTConstantResource(node.Location, node.Tags["resource"] as string);
             }
             if (node.Labels.Contains("NullLiteral")) {
-                return new DMASTConstantNull();
+                return new DMASTConstantNull(node.Location);
 
             }
             if (node.Labels.Contains("OperatorExpression")) {
@@ -44,7 +43,7 @@ namespace ClopenDream {
                 foreach (var leaf in node.Leaves) {
                     paras.Add(GetCallParameter(leaf));
                 }
-                return new DMASTList(paras.ToArray());
+                return new DMASTList(node.Location, paras.ToArray());
 
             }
             if (node.Labels.Contains("NewlistExpression")) {
@@ -52,10 +51,10 @@ namespace ClopenDream {
                 foreach (var leaf in node.Leaves) {
                     paras.Add(GetCallParameter(leaf));
                 }
-                return new DMASTNewList(paras.ToArray());
+                return new DMASTNewList(node.Location, paras.ToArray());
             }
             if (node.Labels.Contains("SelfExpression")) {
-                return new DMASTCallableSelf();
+                return new DMASTCallableSelf(node.Location);
             }
             if (node.Labels.Contains("PathConstant")) {
                 if (node.Leaves.Count > 0) {
@@ -63,44 +62,44 @@ namespace ClopenDream {
                 }
                 string[] path_elements = (string[])node.Tags["path"];
 
-                return new DMASTConstantPath(new DMASTPath(ConvertPath(node)));
+                return new DMASTConstantPath(node.Location, new DMASTPath(node.Location, ConvertPath(node)));
             }
             if (node.Labels.Contains("IdentExpression")) {
                 return ConvertDeref(node);
             }
             if (node.Labels.Contains("NewExpression")) {
                 if (node.Leaves.Count == 0) {
-                    return new DMASTNewInferred(null);
+                    return new DMASTNewInferred(node.Location, null);
                 }
                 var paras = GetCallParameters(node.Leaves.Skip(1).ToList());
                 if (node.Leaves.Skip(1).ToList().Count == 0) { paras = null; }
                 if (node.Leaves[0].Labels.Contains("EmptyExpression")) {
                     if (node.Leaves.Count == 1) {
-                        return new DMASTNewInferred(new DMASTCallParameter[0]);
+                        return new DMASTNewInferred(node.Location, new DMASTCallParameter[0]);
                     }
-                    return new DMASTNewInferred(paras);
+                    return new DMASTNewInferred(node.Location, paras);
                 }
                 else if (node.Leaves[0].Labels.Contains("PathConstant")) {
                     if (node.Leaves[0].Leaves.Count > 0) {
                         Console.WriteLine("warning: modified types");
                     }
-                    var path = new DMASTPath(ConvertPath(node.Leaves[0]));
+                    var path = new DMASTPath(node.Location, ConvertPath(node.Leaves[0]));
                     if (node.Leaves.Count == 1) {
-                        return new DMASTNewPath(path, new DMASTCallParameter[0]);
+                        return new DMASTNewPath(node.Location, path, new DMASTCallParameter[0]);
                     }
-                    return new DMASTNewPath(path, paras);
+                    return new DMASTNewPath(node.Location, path, paras);
                 }
                 else if (node.Leaves[0].Labels.Contains("IdentExpression")) {
                     DMASTExpression expr = ConvertDeref(node.Leaves[0]);
                     if (expr is DMASTIdentifier idexpr) {
-                        return new DMASTNewIdentifier(idexpr, paras);
+                        return new DMASTNewIdentifier(node.Location, idexpr, paras);
                     }
                     else if (expr is DMASTDereference deref_expr) {
-                        return new DMASTNewDereference(deref_expr, paras);
+                        return new DMASTNewDereference(node.Location, deref_expr, paras);
                     }
                 }
                 else if (node.Leaves[0].Labels.Contains("SelfExpression")) {
-                    return new DMASTNewIdentifier(new DMASTIdentifier("."), paras);
+                    return new DMASTNewIdentifier(node.Location, new DMASTIdentifier(node.Location, "."), paras);
                 }
                 else {
                     throw node.Error("GetExpression.NewExpression");
@@ -111,14 +110,14 @@ namespace ClopenDream {
                     throw node.Error("IndexExpression");
                 }
                 if (node.Leaves.Count == 2) {
-                    return new DMASTListIndex(GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]));
+                    return new DMASTListIndex(node.Location, GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]), false);
                 }
-                return new DMASTListIndex(IndexInnerToNode(node), GetExpression(node.Leaves[0]));
+                return new DMASTListIndex(node.Location, IndexInnerToNode(node), GetExpression(node.Leaves[0]), false);
             }
             if (node.Labels.Contains("CallExpression")) {
                 var paras = GetCallParameters(node.Leaves);
                 var callable = CallInnerToNode(node);
-                return new DMASTProcCall(callable, paras);
+                return new DMASTProcCall(node.Location, callable, paras);
             }
             if (node.Labels.Contains("DynamicCallExpression")) {
                 List<DMASTCallParameter> callParams = new();
@@ -142,41 +141,41 @@ namespace ClopenDream {
                 if (node.Leaves.Count >= 3) {
                     procParams.AddRange(GetCallParameters(node.Leaves.Skip(2).ToList()));
                 }
-                return new DMASTCall(callParams.ToArray(), procParams.ToArray());
+                return new DMASTCall(node.Location, callParams.ToArray(), procParams.ToArray());
             }
             if (node.Labels.Contains("ArgListExpression")) {
-                return new DMASTProcCall(new DMASTCallableProcIdentifier("arglist"), GetCallParameters(node.Leaves) );
+                return new DMASTProcCall(node.Location, new DMASTCallableProcIdentifier(node.Location, "arglist"), GetCallParameters(node.Leaves) );
             }
             if (node.Labels.Contains("PrePostExpression")) {
                 if (node.Tags["dot"] as string == "post++") {
                     if (node.Leaves.Count == 0) {
-                        return new DMASTPostIncrement(IndexInnerToNode(node));
+                        return new DMASTPostIncrement(node.Location, IndexInnerToNode(node));
                     }
-                    return new DMASTPostIncrement(GetExpression(node.Leaves[0]));
+                    return new DMASTPostIncrement(node.Location, GetExpression(node.Leaves[0]));
                 }
                 if (node.Tags["dot"] as string == "post--") {
                     if (node.Leaves.Count == 0) {
-                        return new DMASTPostDecrement(IndexInnerToNode(node));
+                        return new DMASTPostDecrement(node.Location, IndexInnerToNode(node));
                     }
-                    return new DMASTPostDecrement(GetExpression(node.Leaves[0]));
+                    return new DMASTPostDecrement(node.Location, GetExpression(node.Leaves[0]));
                 }
             }
             if (node.Labels.Contains("EmptyExpression")) {
                 //return null;
-                return new DMASTConstantNull();
+                return new DMASTConstantNull(node.Location);
             }
             if (node.Labels.Contains("BuiltinExpression")) {
                 if (node.Tags.ContainsKey("special")) {
                     Console.WriteLine("warning: global vars");
-                    return new DMASTConstantNull();
+                    return new DMASTConstantNull(node.Location);
                 }
                 string proc_ident = (string)node.Tags["bare"];
                 if (proc_ident == "istype") {
                     if (node.Leaves.Count == 1) {
-                        return new DMASTImplicitIsType(GetExpression(node.Leaves[0]));
+                        return new DMASTImplicitIsType(node.Location, GetExpression(node.Leaves[0]));
                     }
                     else if (node.Leaves.Count == 2) {
-                        return new DMASTIsType(GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]));
+                        return new DMASTIsType(node.Location, GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]));
                     }
                     else {
                         throw node.Error("GetExpression.IsType");
@@ -197,24 +196,24 @@ namespace ClopenDream {
                             throw node.Error("GetExpression.Pick");
                         }
                     }
-                    return new DMASTPick(picks.ToArray());
+                    return new DMASTPick(node.Location, picks.ToArray());
                 }
                 if (proc_ident == "locate") {
                     if (node.Leaves.Count == 3) {
-                        return new DMASTLocateCoordinates(GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]), GetExpression(node.Leaves[2]));
+                        return new DMASTLocateCoordinates(node.Location, GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]), GetExpression(node.Leaves[2]));
                     }
                     if (node.Leaves.Count == 2) {
-                        return new DMASTLocate(NullifyNull(GetExpression(node.Leaves[0])), GetExpression(node.Leaves[1]));
+                        return new DMASTLocate(node.Location, NullifyNull(GetExpression(node.Leaves[0])), GetExpression(node.Leaves[1]));
                     }
                     if (node.Leaves.Count == 1) {
-                        return new DMASTLocate(NullifyNull(GetExpression(node.Leaves[0])), null);
+                        return new DMASTLocate(node.Location, NullifyNull(GetExpression(node.Leaves[0])), null);
                     }
                     if (node.Leaves.Count == 0) {
-                        return new DMASTLocate(null, null);
+                        return new DMASTLocate(node.Location, null, null);
                     }
                 }
                 if (proc_ident == "initial") {
-                    return new DMASTInitial(GetExpression(node.Leaves[0]));
+                    return new DMASTInitial(node.Location, GetExpression(node.Leaves[0]));
                 }
                 if (proc_ident == "input") {
                     var vt = DMValueType.Text;
@@ -237,17 +236,17 @@ namespace ClopenDream {
                     if (node.Leaves.Count > 5) {
                         list_expr = GetExpression(node.Leaves[5]);
                     }
-                    return new DMASTInput(args.Reverse<DMASTCallParameter>().ToArray(), vt, list_expr);
+                    return new DMASTInput(node.Location, args.Reverse<DMASTCallParameter>().ToArray(), vt, list_expr);
                 }
                 if (proc_ident == "text") {
                     var s = node.Leaves[0].Tags["string"] as string;
                     if (node.Leaves.Count == 1) {
-                        return new DMASTConstantString(s);
+                        return new DMASTConstantString(node.Location, s);
                     }
-                    return new DMASTStringFormat(EscapeString(FormatText(s)), node.Leaves.Skip(1).Select((n) => GetExpression(n)).ToArray());
+                    return new DMASTStringFormat(node.Location, EscapeString(FormatText(s)), node.Leaves.Skip(1).Select((n) => GetExpression(n)).ToArray());
                 }
                 var paras = GetCallParameters( node.Leaves );
-                return new DMASTProcCall(new DMASTCallableProcIdentifier(proc_ident), paras.ToArray());
+                return new DMASTProcCall(node.Location, new DMASTCallableProcIdentifier(node.Location, proc_ident), paras.ToArray());
             }
             throw node.Error("GetExpression");
         }

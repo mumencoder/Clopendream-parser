@@ -1,7 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
 using DMCompiler.DM.Visitors;
 
 namespace ClopenDream {

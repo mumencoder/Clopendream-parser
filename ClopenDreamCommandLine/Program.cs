@@ -4,11 +4,9 @@ using System.IO;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using OpenDreamShared.Compiler;
-using OpenDreamShared.Compiler.DMPreprocessor;
-using OpenDreamShared.Compiler.DM;
+using DMCompiler.Compiler.DM;
+using DMCompiler.Compiler.DMPreprocessor;
 using OpenDreamShared.Dream;
-using OpenDreamShared.Json;
 using Newtonsoft.Json;
 
 namespace ClopenDream {
@@ -80,7 +78,7 @@ namespace ClopenDream {
             if (mode == "clopen") {
                 Console.WriteLine("clopen parse");
                 ast = ClopenParse(byond_codetree, working_dir);
-                DMCompiler.Program.CompileAST(ast);
+                //DMCompiler.Program.CompileAST(ast);
 
                 //new DMCompiler.DM.Experimental.ASTTraveler().Travel(ast);
                 //string outputFile = Path.ChangeExtension(dm_original.FullName, "json");
@@ -242,16 +240,7 @@ namespace ClopenDream {
         }
 
         static DMASTFile GetAST(string filename) {
-            DMPreprocessor dmpp = DMCompiler.Program.Preprocess(new() { filename });
-            DMLexer dmLexer = new DMLexer(null, dmpp.GetResult());
-            DMParser dmParser = new DMParser(dmLexer);
-            DMASTFile ast = dmParser.File();
-            if (dmParser.Errors.Count > 0) {
-                foreach (CompilerError error in dmParser.Errors) {
-                    Console.WriteLine(error.ToString());
-                }
-            }
-            return ast;
+            return new DMASTFile(new OpenDreamShared.Compiler.Location(), null);
         }
 
      }
