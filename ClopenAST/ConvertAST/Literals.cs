@@ -39,7 +39,7 @@ namespace ClopenDream {
             return true;
         }
 
-        public string EscapeString(string s) {
+        public string EscapeStringNew(string s) {
             if (s == null) { return s; }
 
             int write_pos = 0;
@@ -86,8 +86,8 @@ namespace ClopenDream {
             return new string(cs.Take<char>(write_pos).ToArray());
         }
 
-        static string[] ignored_escapes = new string[] { "improper", "proper", "The", "red", "blue", "green", "Roman" };
-        string EscapeStringOld(string s) {
+        static string[] ignored_escapes = new string[] { "improper", "proper", "The", "red", "blue", "green", "Roman", "roman", "he", "she", "himself", "herself", "his", "hers" };
+        string EscapeString(string s) {
             if (s == null) { return s; }
 
             int write_pos = 0;
@@ -134,6 +134,15 @@ namespace ClopenDream {
                     }
                     else if (c2 == ']') {
                         cs[write_pos++] = ']';
+                    }
+                    else if (c2 == '<') {
+                        cs[write_pos++] = '<';
+                    }
+                    else if (c2 == '>') {
+                        cs[write_pos++] = '>';
+                    }
+                    else if (c2 == ' ') {
+                        cs[write_pos++] = ' ';
                     }
                     else {
                         throw new Exception("unknown string escape " + s);

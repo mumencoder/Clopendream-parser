@@ -4,47 +4,38 @@ using System.Reflection;
 using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Dream.Procs;
+using DMCompiler.Compiler;
 using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
+
     public class ASTCompare {
-        public void CompareTopLevel(DMAST.ASTHasher l_hash, DMAST.ASTHasher r_hash) {
-            var def_n = 0;
-            var missing_n = 0;
-            List<(DMASTNode, DMASTNode)> mismatches = new();
-            
-            foreach(var kv in l_hash.nodes) {
-                def_n += 1;
-                if (!r_hash.nodes.ContainsKey(kv.Key)) {
-                    missing_n += 1;
-                }
-                else {
-                    var lnl = l_hash.nodes[kv.Key];
-                    var lnr = r_hash.nodes[kv.Key];
-                    if (lnl.Count != lnr.Count) {
-                        //mismatches.Add((lnl, lnr));
-                    }
-                    if (lnl.GetType() != lnr.GetType()) {
-                    }
-                }
-            }
-            def_n = 0;
-            missing_n = 0;
-            foreach (var kv in r_hash.nodes) {
-                def_n += 1;
-                if (!l_hash.nodes.ContainsKey(kv.Key)) {
-                    missing_n += 1;
-                }
-            }
+        public List<Result> Results = new();
+        public DMAST.Labeler Labeler = new();
+        public DMASTNode nl, nr;
+        public bool Success;
+
+        public ASTCompare(DMASTNode _nl, DMASTNode _nr) {
+            nl = _nl;
+            nr = _nr;
+            Success = Compare(nl, nr);
         }
 
-        public static List<Type> equality_field_types = new() {
+        public static List<Type> equality_types = new() {
+            typeof(char),
             typeof(string),
             typeof(int),
             typeof(float),
             typeof(bool),
-            typeof(DMValueType)
+            typeof(DMASTDereference.DereferenceType),
+            typeof(DMValueType),
+            typeof(DreamPath)
         };
+
+        public static List<Type> ignore_types = new() {
+            typeof(OpenDreamShared.Compiler.Location)
+        };
+
 
         public class Result {
             public object A;
@@ -60,156 +51,160 @@ namespace ClopenDream {
             }
         }
 
-        public static bool Compare(object node_l, object node_r, Action<Result> cr) {
-            if (node_l == null || node_r == null) {
-                if (node_r == node_l) { return true; }
-                // note sometimes null, sometimes not in OD
-                if (node_l is DMASTCallParameter[] || node_r is DMASTCallParameter[]) {
-                    return true;
+        public Result CompareObjects(object node_l, object node_r) {
+            Labeler.Add(node_l);
+            Labeler.Add(node_r);
+            var compare_ty = node_l.GetType();
+
+            // TODO: temporary fix
+            if (node_r is DMASTProcStatementInfLoop) {
+                return null;
+            }
+            if (compare_ty.IsAssignableTo(typeof(DMASTNode)) || compare_ty.IsAssignableTo(typeof(DMASTCallable))) {
+                // Note byond truncates .0 for constants
+                if (node_l is DMASTConstantInteger || node_r is DMASTConstantFloat) {
+                    return null;
                 }
-                cr(new(node_l, node_r, "null mismatch"));
-                return false;
+                // note byond converts a number like 1000000
+                if (node_l is DMASTConstantFloat || node_r is DMASTConstantInteger) {
+                    return null;
+                }
+                // note byond does not have a reasonable precedence for the in operator
+                if (node_l is DMASTExpressionIn || node_r is DMASTExpressionIn) {
+                    return null;
+                }
             }
 
+            if (node_l.GetType() != node_r.GetType()) { return new(node_l, node_r, "type mismatch"); }
+
+            if (ignore_types.Contains(node_l.GetType())) {
+                return null;
+            }
+            if (node_l is float fl && node_r is float fr) {
+                if (Math.Abs(fl - fr) > (1 / 1024.0)) {
+                    return new(node_l, node_r, $"float mismatch {Math.Abs(fl - fr)}");
+                }
+                return null;
+            }
+            if (equality_types.Contains(compare_ty)) {
+                if (!node_l.Equals(node_r)) {
+                    return new(node_l, node_r, "equality mismatch", $"{node_l.GetType().FullName}");
+                }
+                return null;
+            }
             // byond optimizes ternary expressions
             if (node_l is DMASTProcStatementIf if_node && node_r is DMASTProcStatementExpression stexpr) {
                 if (if_node.Condition is DMASTNot && stexpr.Expression is DMASTTernary t) {
                     if (t.B is DMASTConstantNull) {
-                        return true;
+                        return null;
                     }
                 }
+                return new(node_l, node_r, "field mismatch", $"{node_l.GetType().FullName}");
             }
-            if (node_l.GetType() != node_r.GetType()) { cr(new(node_l, node_r, "type mismatch")); return false; }
 
-            foreach (var field in node_l.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)) {
-                Type compare_ty = Nullable.GetUnderlyingType(field.FieldType);
-                if (compare_ty == null) {
-                    compare_ty = field.FieldType;
+            if (compare_ty.IsAssignableTo(typeof(DMASTNode))) { return null; }
+            if (compare_ty.IsAssignableTo(typeof(VarDeclInfo))) { return null; }
+            if (compare_ty.IsAssignableTo(typeof(DMASTPick.PickValue))) { return null; }
+            if (compare_ty.IsAssignableTo(typeof(DMASTProcStatementSwitch.SwitchCase))) { return null; }
+            if (compare_ty.IsArray) { return null; }
+
+            throw new Exception($"Unknown compare type {compare_ty.FullName}");
+        }
+
+        public bool Compare(object node_l, object node_r) {
+            if (node_l == null || node_r == null) {
+                if (node_r == node_l) { return true; }
+                // note sometimes null, sometimes not in OD
+                if (node_l is DMASTConstantNull || node_r is DMASTConstantNull) {
+                    return true;
                 }
-                object vl = field.GetValue(node_l);
-                object vr = field.GetValue(node_r);
-                if (vl == null || vr == null) {
-                    if (vl == vr) { continue; }
-                    if ((vl is DMASTCallParameter[] && vr == null)) {
-                        continue;
+                if (node_l is DMASTCallParameter[] || node_r is DMASTCallParameter[]) {
+                    return true;
+                }
+                Results.Add(new(node_l, node_r, "null mismatch"));
+                return false;
+            }
+
+            Result r = CompareObjects(node_l, node_r);
+            if (r != null) {
+                Results.Add(r);
+                return false;
+            };
+
+            Type nty = Nullable.GetUnderlyingType(node_l.GetType());
+            if (nty == null) {
+                nty = node_l.GetType();
+            }
+            if (equality_types.Contains(nty)) {
+                return true;
+            }
+            if (ignore_types.Contains(nty)) {
+                return true;
+            }
+
+            if (nty.IsArray) {
+                var al = (Array)node_l;
+                var ar = (Array)node_r;
+                // NOTE DMASTMultipleObjectVarDefinitions is an OD thing
+                List<object> new_r = new();
+                foreach (var rnode in ar) {
+                    if (rnode is DMASTProcStatementMultipleVarDeclarations multi) {
+                        new_r.AddRange(multi.VarDeclarations);
                     }
-                    if ((vr is DMASTCallParameter[] && vl == null)) {
-                        continue;
+                    else {
+                        new_r.Add(rnode);
                     }
-                    cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
+                }
+                ar = new_r.ToArray();
+                if (al == null || ar == null) {
+                    if (al == ar) { return true; }
+                    Results.Add(new(node_l, node_r, "array mismatch", node_l.GetType().FullName));
                     return false;
                 }
 
-                if (compare_ty.IsAssignableTo(typeof(DMASTNode))) {
-                    // Note byond truncates .0 for constants
-                    if (vl is DMASTConstantInteger || vr is DMASTConstantFloat) {
-                        continue;
-                    }
-                    // note byond converts a number like 1000000
-                    if (vl is DMASTConstantFloat || vr is DMASTConstantInteger) {
-                        continue;
-                    }
-                    // note byond does not have a reasonable precedence for the in operator
-                    if (vl is DMASTExpressionIn || vr is DMASTExpressionIn) {
-                        continue;
-                    }
-                    if (!Compare(vl, vr, cr)) {
-                        return false;
-                    }
-                }
-                else if (compare_ty.IsArray) {
-                    if ((vl is DMASTCallParameter[] && vr == null)) {
-                        continue;
-                    }
-                    var al = (Array)vl;
-                    var ar = (Array)vr;
-                    // NOTE DMASTMultipleObjectVarDefinitions is an OD thing
-                    List<object> new_r = new();
-                    foreach (var rnode in ar) {
-                        if (rnode is DMASTProcStatementMultipleVarDeclarations multi) {
-                            new_r.AddRange(multi.VarDeclarations);
-                        }
-                        else {
-                            new_r.Add(rnode);
-                        }
-                    }
-                    ar = new_r.ToArray();
-                    if (al == null || ar == null) {
-                        if (al == ar) { continue; }
-                        cr(new(al, ar, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
-                        return false;
-                    }
-
-                    int null_ct = 0;
-                    Array lo, hi;
-                    if (ar.Length > al.Length) {
-                        hi = ar;
-                        lo = al;
-                    }
-                    else {
-                        hi = al;
-                        lo = ar;
-                    }
-
-                    // NOTE byond drops an extra , which creates an implied null parameter in opendream
-                    if (lo.Length != hi.Length) {
-                        for (int i = lo.Length; i < hi.Length; i++) {
-                            var extra = hi.GetValue(i) as DMASTNode;
-                            if (!Compare(extra, new DMASTCallParameter(new OpenDreamShared.Compiler.Location(), new DMASTConstantNull(new OpenDreamShared.Compiler.Location())), cr)) {
-                                cr(new(al, ar, "array length mistmatch", extra));
-                                return false;
-                            }
-                            null_ct++;
-                        }
-                    }
-                    if (Math.Abs(lo.Length - hi.Length) != null_ct) {
-                        cr(new(vl, vr, "field mismatch array length", ""));
-                        return false;
-                    }
-                    for (var i = 0; i < lo.Length; i++) {
-                        if (!Compare(al.GetValue(i), ar.GetValue(i), cr)) {
-                            return false;
-                        }
-                    }
-                }
-                else if (compare_ty.IsValueType) {
-                    if (vl is int il && vr is int ir) {
-                        if (il != ir) {
-                            Console.WriteLine("int mismatch " + vl + " " + vr);
-                            continue;
-                        }
-                    }
-                    // note byond does not print floats with enough precision
-                    if (vl is float fl && vr is float fr) {
-                        if (Math.Abs(fl - fr) > (1 / 1024)) {
-                            Console.WriteLine("float mismatch " + vl + " " + vr);
-                            continue;
-                        }
-                    }
-                    if ((vl == null && vr is DMASTCallParameter[])) {
-                        continue;
-                    }
-                    if (!vl.Equals(vr)) {
-                        cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
-                        return false;
-                    }
-                }
-                else if (compare_ty.IsAssignableTo(typeof(DreamPath))) {
-                    var pathr = vl as DreamPath?;
-                    var pathl = vr as DreamPath?;
-                    if (!pathr.Equals(pathl)) {
-                        cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
-                        return false;
-                    }
-                }
-                else if (equality_field_types.Contains(compare_ty)) {
-                    if (!vl.Equals(vr)) {
-                        cr(new(vl, vr, "field mismatch", node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name));
-                        return false;
-                    }
+                int null_ct = 0;
+                Array lo, hi;
+                if (ar.Length > al.Length) {
+                    hi = ar;
+                    lo = al;
                 }
                 else {
-                    throw new Exception(node_l.GetType().FullName + " . (" + field.FieldType.FullName + ") " + field.Name);
+                    hi = al;
+                    lo = ar;
+                }
+
+                // NOTE byond drops an extra , which creates an implied null parameter in opendream
+                if (lo.Length != hi.Length) {
+                    for (int i = lo.Length; i < hi.Length; i++) {
+                        var extra = hi.GetValue(i) as DMASTNode;
+                        var compare_node = new DMASTCallParameter(new OpenDreamShared.Compiler.Location(), new DMASTConstantNull(new OpenDreamShared.Compiler.Location()));
+                        if (!Compare(extra, compare_node)) {
+                            Results.Add(new(al, ar, "array length mismatch", extra));
+                            return false;
+                        }
+                        null_ct++;
+                    }
+                }
+                if (Math.Abs(lo.Length - hi.Length) != null_ct) {
+                    Results.Add(new(node_l, node_r, "field mismatch array length", ""));
+                    return false;
+                }
+                for (var i = 0; i < lo.Length; i++) {
+                    if (!Compare(al.GetValue(i), ar.GetValue(i))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            if (node_l.GetType() != node_r.GetType()) { return true; }
+
+            foreach (var field in node_l.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)) {
+                object vl = field.GetValue(node_l);
+                object vr = field.GetValue(node_r);
+
+                if (!Compare(vl, vr)) {
+                    return false;
                 }
             }
 

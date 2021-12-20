@@ -18,7 +18,7 @@ namespace ClopenDream {
             foreach (var leaf in nodes) {
                 stmts.AddRange(GetStatements(leaf));
             }
-            return new DMASTBlockInner(nodes[0].Location, stmts.ToArray());
+            return new DMASTBlockInner(nodes.Count > 0 ? nodes[0].Location : OpenDreamShared.Compiler.Location.Unknown, stmts.ToArray());
         }
         IEnumerable<DMASTStatement> GetStatements(Node node) {
             if (node.Labels.Contains("ObjectDecl")) {
@@ -125,7 +125,7 @@ namespace ClopenDream {
         }
 
         DMASTProcBlockInner GetProcBlockInner(List<Node> nodes) {
-            return new DMASTProcBlockInner(nodes[0].Location, GetProcStatements(nodes).ToArray());
+            return new DMASTProcBlockInner(nodes.Count > 0 ? nodes[0].Location : OpenDreamShared.Compiler.Location.Unknown, GetProcStatements(nodes).ToArray());
         }
 
         DMASTExpression GetVarInit(Node node) {
@@ -157,6 +157,7 @@ namespace ClopenDream {
             if (node.Labels.Contains("PathTerminated")) {
                 pathStack.Push(node);
                 DMASTExpression expr = new DMASTConstantNull(node.Location);
+                var val_type = OpenDreamShared.Dream.Procs.DMValueType.Anything;
                 var index_modifier = false;
                 foreach (var subnode in node.Leaves) {
                     var modnode = subnode.UniqueLeaf();
@@ -171,7 +172,7 @@ namespace ClopenDream {
                         index_modifier = true;
                     }
                     else if (modnode.Labels.Contains("AsModifier")) {
-                        // TODO handle this
+                        val_type = ConvertDMValueType(modnode.Leaves[0]);
                     }
                     else {
                         throw node.Error("Unknown object var declaration modifier");
@@ -183,7 +184,7 @@ namespace ClopenDream {
                 {
                     path = new OpenDreamShared.Dream.DreamPath($"var/list/{node.Tags["bare"]}");
                 }
-                var define = new DMASTObjectVarDefinition(node.Location, path, expr);
+                var define = new DMASTObjectVarDefinition(node.Location, path, expr, valType:val_type);
                 AssociateNodes(node, define);
                 VisitDefine(node, define);
                 yield return define;

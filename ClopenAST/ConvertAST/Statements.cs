@@ -413,7 +413,9 @@ namespace ClopenDream {
                             cnode += 1;
                             body = GetProcBlockInner(body_node.Leaves);
                         }
-                        return (new DMASTProcStatementFor(for_node.Location, new DMASTProcStatementExpression(for_node.Location, GetExpression(for_expr)), body), cnode); 
+                        var placeholder = new DMASTProcStatementExpression(for_node.Location, new DMASTConstantString(for_node.Location, "This is a ForBody placeholder") );
+                        return (placeholder, cnode);
+                        //return (new DMASTProcStatementFor(for_node.Location, new DMASTProcStatementExpression(for_node.Location, GetExpression(for_expr)), body), cnode); 
                     }
                 }
                 throw for_node.Error("invalid for loop");
