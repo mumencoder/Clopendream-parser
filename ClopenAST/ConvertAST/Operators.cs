@@ -60,7 +60,7 @@ namespace ClopenDream {
                 case "^=": return GetRightAssoc(n.Location, n.Leaves, typeof(DMASTXorAssign));
                 case "%=": return GetRightAssoc(n.Location, n.Leaves, typeof(DMASTModulusAssign));
                 case "in": return new DMASTExpressionIn(n.Location, GetExpression(n.Leaves[0]), GetExpression(n.Leaves[1]));
-                case "to": return null;
+                case "to": return new DMASTConstantNull(n.Location);
                 case "step": {
                         var paras = GetCallParameters(n.Leaves);
                         return new DMASTProcCall(n.Location, new DMASTCallableProcIdentifier(n.Location, "step"), paras.ToArray());

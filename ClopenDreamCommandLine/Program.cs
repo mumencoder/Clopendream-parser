@@ -15,7 +15,16 @@ namespace ClopenDream {
             var rootCommand = new RootCommand();
             rootCommand.Description = "ClopenDream";
 
-            var command = new Command("test-parse") {
+            var command = new Command("compile") {
+                new Argument<FileInfo>("byond_codetree", "Input code tree"),
+                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Output directory" ),
+                new Option<FileInfo>("--dm_original", "Original DM file")
+            };
+            command.Description = "Compile a DM file to OpenDream JSON";
+            command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, FileInfo>(Compile_Handler);
+            rootCommand.AddCommand(command);
+
+            command = new Command("test-parse") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
                 new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
                 new Option<FileInfo>("--dm_original", "Original DM file")
@@ -34,6 +43,13 @@ namespace ClopenDream {
             rootCommand.AddCommand(command);
 
             return rootCommand.InvokeAsync(args).Result;
+        }
+
+        static int Compile_Handler(FileInfo byond_codetree, DirectoryInfo working_dir, FileInfo dm_original) {
+            Program.working_dir = working_dir;
+            DMCompiler.DMCompiler.Settings.SuppressUnimplementedWarnings = true;
+            DMASTFile ast = ClopenParse(byond_codetree, null);
+            return DMCompiler.DMCompiler.CompileAST(ast);
         }
 
         static int Test_Parse_Handler(FileInfo byond_codetree, DirectoryInfo working_dir, FileInfo dm_original) {
