@@ -86,7 +86,7 @@ namespace ClopenDream {
             return new string(cs.Take<char>(write_pos).ToArray());
         }
 
-        static string[] ignored_escapes = new string[] { "improper", "proper", "The", "red", "blue", "green", "Roman", "roman", "he", "she", "himself", "herself", "He", "She", "him", "her", "his", "hers", "icon", "bold", "italic" };
+        static string[] ignored_escapes = new string[] { "improper", "proper", "The", "red", "green", "Roman", "roman", "he", "she", "himself", "herself", "He", "She", "him", "her", "his", "hers", "icon", "bold", "italic" };
         string EscapeString(string s) {
             if (s == null) { return s; }
 

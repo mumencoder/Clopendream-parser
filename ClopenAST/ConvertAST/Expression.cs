@@ -81,7 +81,7 @@ namespace ClopenDream {
                 }
                 else if (node.Leaves[0].Labels.Contains("PathConstant")) {
                     if (node.Leaves[0].Leaves.Count > 0) {
-                        Console.WriteLine("warning: modified types");
+                        Console.WriteLine($"{node.Location}: warning: modified types");
                     }
                     var path = new DMASTPath(node.Location, ConvertPath(node.Leaves[0]));
                     if (node.Leaves.Count == 1) {
