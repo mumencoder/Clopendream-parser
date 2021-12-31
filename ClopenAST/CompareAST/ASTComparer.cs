@@ -48,7 +48,7 @@ namespace ClopenDream {
         public void DefineComparer(DMASTNode node) {
             var orig_nodes = _openAstHash.GetNode(node);
             if (orig_nodes == null) {
-                Console.WriteLine($"{node.Location}: OpenDream missing {DMAST.ASTHasher.Hash(node as dynamic)}");
+                Console.WriteLine($"{node.Location}: missing {DMAST.ASTHasher.Hash(node as dynamic)}");
                 return;
             }
             var found_match = false;
@@ -64,6 +64,7 @@ namespace ClopenDream {
                 compares.Add(compare);
             }
             if (found_match == false) {
+                Console.WriteLine($"{node.Location}: mismatch {DMAST.ASTHasher.Hash(node as dynamic)}");
                 MismatchEvent(compares);
             }
         }

@@ -21,75 +21,10 @@ namespace ClopenDream {
                 _cPos++;
             } while (true);
         }
-        public string ConstPath(int explicitStatus) {
-            string explic = "";
-            var start = _cPos;
-            if (getc() == '/') {
-                explic = "/";
-                if (explicitStatus == -1) { return null; }
-                _cPos++;
-            }
-            else if (getc() == ':') {
-                explic = ":";
-                if (explicitStatus == -1) { return null; }
-                _cPos++;
-            }
-            else if (getc() == '.') {
-                explic = ".";
-                if (explicitStatus == -1) { return null; }
-                _cPos++;
-            }
-            else if (explicitStatus == 1) { return null; }
-
-            var ident = read_ident();
-            if (ident == null && explic != "") {
-                return explic;
-            }
-            else if (ident == null) {
-                _cPos = start;
-                return null;
-            }
-            return explic + ident;
-        }
 
         public string[] ExpressionPath(int explicitStatus) {
             List<string> segments = new();
-            var cpath = ConstPath(explicitStatus);
-            segments.Add(cpath);
-            while (cpath != null && is_path_separator(getc())) {
-                if (getc() == '/') {
-                    _cPos++;
-                    cpath = ConstPath(0);
-                    if (cpath == null) {
-                        segments.Add("/");
-                        break;
-                    }
-                    segments.Add("/");
-                    segments.Add(cpath);
-                }
-                else if (getc() == ':') {
-                    _cPos++;
-                    cpath = ConstPath(0);
-                    if (cpath == null) {
-                        throw new Exception("dangling :");
-                    }
-                    segments.Add(":");
-                    segments.Add(cpath);
-                }
-                else if (getc() == '.') {
-                    _cPos++;
-                    cpath = ConstPath(0);
-                    if (cpath == null) {
-                        throw new Exception("dangling .");
-                    }
-                    segments.Add(".");
-                    segments.Add(cpath);
-                }
-                else {
-                    return segments.ToArray();
-                }
-            }
-            return segments.ToArray();
+            return read_path();
         }
 
         (string, object) ExprParens() {

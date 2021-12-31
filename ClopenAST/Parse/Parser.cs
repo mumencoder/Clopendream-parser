@@ -76,7 +76,9 @@ namespace ClopenDream {
                 if (l == null) {
                     Console.WriteLine("bad location " + _cLineNumber + " |" + _cText.Substring(lpos));
                 }
-                cNode.Location = l.Value;
+                else {
+                    cNode.Location = l.Value;
+                }
                 cNode.RawLine = _cLineNumber;
                 cNode.Text = _cText;
                 cNode.Indent = indent;
@@ -107,7 +109,6 @@ namespace ClopenDream {
             var ctx = new LabelContext();
             root.Connect();
             ctx.CheckTopLevel(root);
-
             return root;
         }
 

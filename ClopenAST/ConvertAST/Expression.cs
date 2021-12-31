@@ -14,17 +14,24 @@ namespace ClopenDream {
                 return ConvertNumericLiteral(node, (string)node.Tags["numeric"]); 
             }
             if (node.Labels.Contains("StringLiteral")) {
-                if (node.Leaves.Count == 0) {
-                    return new DMASTConstantString(node.Location, EscapeString((string)node.Tags["string"]));
+                string s = node.Tags["string"] as string;
+                int format_args = CountFormatArgs(s);
+                s = EscapeString(FormatText(s));
+                
+                if (format_args == 0) {
+                    return new DMASTConstantString(node.Location, s);
                 }
                 else {
-                    var paras = node.Leaves.Select((n) => GetExpression(n)).ToArray();
-                    for (int i = 0; i < paras.Length; i++) {
+                    var paras = node.Leaves.Select((n) => GetExpression(n)).ToList();
+                    for (int i = 0; i < paras.Count; i++) {
                         if (paras[i] is DMASTConstantNull) {
                             paras[i] = null;
                         }
                     }
-                    return new DMASTStringFormat(node.Location, EscapeString(FormatText(node.Tags["string"] as string)), paras);
+                    while (paras.Count < format_args) {
+                        paras.Add(null);
+                    }
+                    return new DMASTStringFormat(node.Location, s, paras.ToArray());
                 }
 
             }
@@ -56,13 +63,15 @@ namespace ClopenDream {
             if (node.Labels.Contains("SelfExpression")) {
                 return new DMASTCallableSelf(node.Location);
             }
+            if (node.Labels.Contains("LotsaDots")) {
+                string s = node.Tags["special"] as string;
+                return new DMASTConstantPath(node.Location, new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath(s)));
+            }
             if (node.Labels.Contains("PathConstant")) {
                 if (node.Leaves.Count > 0) {
                     Console.WriteLine($"{node.Location}: warning: modified types");
                 }
-                string[] path_elements = (string[])node.Tags["path"];
-
-                return new DMASTConstantPath(node.Location, new DMASTPath(node.Location, ConvertPath(node)));
+                return ConvertPath(node);
             }
             if (node.Labels.Contains("IdentExpression")) {
                 return ConvertDeref(node);
@@ -83,7 +92,7 @@ namespace ClopenDream {
                     if (node.Leaves[0].Leaves.Count > 0) {
                         Console.WriteLine($"{node.Location}: warning: modified types");
                     }
-                    var path = new DMASTPath(node.Location, ConvertPath(node.Leaves[0]));
+                    var path = new DMASTPath(node.Location, FlattenPath(node.Leaves[0]));
                     if (node.Leaves.Count == 1) {
                         return new DMASTNewPath(node.Location, path, new DMASTCallParameter[0]);
                     }
@@ -189,8 +198,14 @@ namespace ClopenDream {
                             continue;
                         }
                         else if (pv_node.Tags.ContainsKey("blank")) {
-                            var pexpr = pv_node.Leaves[0];
-                            picks.Add(new DMASTPick.PickValue(null, GetExpression(pexpr)));
+                            if (pv_node.Leaves[0].CheckTag("bare", "prob")) {
+                                var prob_node = pv_node.Leaves[0];
+                                picks.Add(new DMASTPick.PickValue(GetExpression(prob_node.Leaves[0]), GetExpression(prob_node.Leaves[1])));
+                            }
+                            else {
+                                var pexpr = pv_node.Leaves[0];
+                                picks.Add(new DMASTPick.PickValue(null, GetExpression(pexpr)));
+                            }
                         }
                         else {
                             throw node.Error("GetExpression.Pick");
@@ -241,7 +256,7 @@ namespace ClopenDream {
                 if (proc_ident == "text") {
                     var s = node.Leaves[0].Tags["string"] as string;
                     if (node.Leaves.Count == 1) {
-                        return new DMASTConstantString(node.Location, s);
+                        return new DMASTConstantString(node.Location, EscapeString(s));
                     }
                     return new DMASTStringFormat(node.Location, EscapeString(FormatText(s)), node.Leaves.Skip(1).Select((n) => GetExpression(n)).ToArray());
                 }

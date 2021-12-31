@@ -29,15 +29,21 @@ namespace ClopenDream {
                 var ident = path[0];
                 var conditional = false;
                 DMASTExpression expr = null;
+                int pos = 0;
                 if (ident == "<expression>") {
                     expr = derefExprStack.Peek();
                     conditional = derefExprCond.Peek();
+                    pos = 1;
+                }
+                else if (ident == "global") {
+                    expr = new DMASTGlobalIdentifier(node.Location, path[2]);
+                    pos = 3;
                 }
                 else {
                     expr = new DMASTIdentifier(node.Location, ident);
+                    pos = 1;
                 }
 
-                int pos = 1;
                 while (pos < path.Length) {
                     if (path[pos] == ".") {
                         expr = new DMASTDereference(node.Location, expr, path[pos + 1], DMASTDereference.DereferenceType.Direct, conditional);
@@ -79,10 +85,7 @@ namespace ClopenDream {
                 return new DMASTConstantResource(node.Location, node.Tags["resource"] as string);
             }
             if (node.Tags.ContainsKey("path")) {
-                // TODO double check paths with .proc in them
-                var path = string.Join("", node.Tags["path"] as string[]);
-                return new DMASTConstantPath(node.Location, new DMASTPath(node.Location, new DreamPath(path)));
-
+                return ConvertPath(node);
             }
             if (node.Tags.ContainsKey("string")) {
                 return new DMASTConstantString(node.Location, EscapeString(node.Tags["string"] as string));
@@ -129,7 +132,9 @@ namespace ClopenDream {
                 if (expr is DMASTIdentifier idexpr) {
                     return new DMASTCallableProcIdentifier(node.Location, idexpr.Identifier);
                 }
-                else if (expr is DMASTDereference deref_expr) {
+                else if (expr is DMASTGlobalIdentifier gidexpr) {
+                    return new DMASTCallableProcIdentifier(node.Location, gidexpr.Identifier);
+                } else if (expr is DMASTDereference deref_expr) {
                     return new DMASTDereferenceProc(node.Location, deref_expr.Expression, deref_expr.Property, deref_expr.Type, deref_expr.Conditional);
                 }
                 else {

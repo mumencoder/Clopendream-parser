@@ -98,6 +98,7 @@ namespace ClopenDream {
         };
         static public HashSet<string> Operators = new() {
             "?.(lhs)",
+            "?:(lhs)",
             "step",
             "in",
             "to",

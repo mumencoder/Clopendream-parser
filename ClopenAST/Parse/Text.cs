@@ -199,21 +199,6 @@ namespace ClopenDream {
             }
             return sb.ToString();
         }
-        public string read_path_segment() {
-            var start = _cPos;
-            if (is_path_separator(getc())) { _cPos++; }
-            if (match(_cText, _cPos, "<expression>")) {
-                _cPos += "<expression>".Length;
-                return _cText.Substring(start, _cPos - start);
-            }
-            else {
-                if (!is_ident_start(getc())) { return null; }
-                while (is_ident(getc())) {
-                    _cPos += 1;
-                }
-                return _cText.Substring(start, _cPos - start);
-            }
-        }
         public string[] read_path() {
             List<string> segments = new();
             bool reading_segments = true;
@@ -221,19 +206,21 @@ namespace ClopenDream {
 
             while (reading_segments) {
                 start = _cPos;
-                string segment = read_path_segment();
-                if (segment == null) {
+                if (match(_cText, _cPos, "<expression>")) {
+                    _cPos += "<expression>".Length;
+                    segments.Add(_cText.Substring(start, _cPos - start));
+                } else if (is_path_separator(getc())) {
+                    segments.Add(getc().ToString());
+                    _cPos++;
+                } else if (is_ident_start(getc())) {
+                    while (is_ident(getc())) {
+                        _cPos += 1;
+                    }
+                    segments.Add(_cText.Substring(start, _cPos - start));
+                } else {
                     reading_segments = false;
-                    _cPos = start;
-                }
-                else {
-                    segments.Add(segment);
-                    if (is_path_separator(getc())) { segments.Add(getc().ToString()); _cPos++; }
-                    else { reading_segments = false; }
                 }
             }
-
-            if (getc() == '/') { segments.Add(getc().ToString()); _cPos++; }
             return segments.ToArray();
         }
 

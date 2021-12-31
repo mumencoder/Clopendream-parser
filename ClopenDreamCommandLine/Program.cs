@@ -33,6 +33,15 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, FileInfo>(Test_Parse_Handler);
             rootCommand.AddCommand(command);
 
+            command = new Command("object-hash") {
+                new Argument<FileInfo>("byond_codetree", "Input code tree"),
+                new Argument<FileInfo>("dm_original", "Original DM file"),
+                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
+            };
+            command.Description = "Write define hashes to file";
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Test_Object_Hash);
+            rootCommand.AddCommand(command);
+
             command = new Command("compare") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
                 new Argument<FileInfo>("dm_original", "Original DM file"),
@@ -58,12 +67,59 @@ namespace ClopenDream {
             return 0;
         }
 
+        static int Test_Object_Hash(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
+            Program.working_dir = working_dir;
+            DMCompiler.DMCompiler.Settings.ExperimentalPreproc = true;
+
+            DMASTFile clopen_ast = ClopenParse(byond_codetree, null);
+            DMASTFile open_ast = GetAST(dm_original.FullName);
+
+            var clopen_hasher = new DMAST.ASTHasher();
+            clopen_hasher.HashFile(clopen_ast);
+            var f1 = File.CreateText(Path.Combine(working_dir.FullName, $"clopen-defs.txt"));
+            foreach (var h in clopen_hasher.nodes.Keys) {
+                f1.WriteLine(h);
+            }
+            f1.Close();
+
+            var open_hasher = new DMAST.ASTHasher();
+            open_hasher.HashFile(open_ast);
+            var f2 = File.CreateText(Path.Combine(working_dir.FullName, $"open-defs.txt"));
+            foreach (var h in open_hasher.nodes.Keys) {
+                f2.WriteLine(h);
+            }
+            f2.Close();
+
+            return 0;
+        }
         static int Compare_Handler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
             Program.working_dir = working_dir;
+            DMCompiler.DMCompiler.Settings.ExperimentalPreproc = true;
             open_AST = GetAST(dm_original.FullName);
             ClopenParse(byond_codetree, Program.Compare);
             return 0;
         }
+        static int Compare_Handler_ODFirst(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
+            Program.working_dir = working_dir;
+            DMCompiler.DMCompiler.Settings.ExperimentalPreproc = true;
+            open_AST = GetAST(dm_original.FullName);
+            var clopen_AST = ClopenParse(byond_codetree, null);
+
+            var openHash = new DMAST.ASTHasher();
+            openHash.HashFile(open_AST);
+
+            var clopenHash = new DMAST.ASTHasher();
+            clopenHash.HashFile(clopen_AST);
+
+            var compare = new ASTComparer(clopenHash);
+            foreach(var nodes in openHash.nodes.Values) {
+                foreach(var node in nodes) {
+                    compare.DefineComparer(node);
+                }
+            }
+            return 0;
+        }
+
         static DMASTFile ClopenParse(FileInfo byond_codetree, Action<ConvertAST> handler) {
             Parser p = new();
             Node root = p.BeginParse(byond_codetree.OpenText());
@@ -98,48 +154,49 @@ namespace ClopenDream {
             open_hasher.HashFile(open_AST);
             comparer = new ASTComparer(open_hasher);
             converter.VisitDefine = DefineCompare;
-            comparer.MismatchEvent = ProcessMismatchResult;
+            comparer.MismatchEvent = (x) => ProcessMismatchResult(x, converter);
             mismatch_count = 0;
 
             void DefineCompare(Node n, DMASTNode node) {
                 comparer.DefineComparer(node);
             }
-            void ProcessMismatchResult(List<ASTCompare> compares) {
-                if (mismatch_count > 1000) {
-                    throw new Exception();
-                }
-                mismatch_count++;
+        }
 
-                int mismatch_id = 0;
-                foreach (var compare in compares) {
-                    mismatch_id += 1;
-                    var path = "mismatch-" + DMAST.ASTHasher.Hash((dynamic)compare.nl) as string;
-                    path = path.Replace("/", "@");
-                    var dir_path = Path.Combine(working_dir.FullName, path);
-                    Directory.CreateDirectory(dir_path);
-                    DMAST.DMASTNodePrinter printer = new();
-                    File.WriteAllText(Path.Combine(dir_path, $"{mismatch_id}-nodes_clopen.txt"), converter.clopen_to_closed_node[compare.nl].PrintLeaves(20));
-                    var f1 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_clopen.txt"));
-                    printer.Print(compare.nl, f1, labeler: compare.Labeler);
-                    f1.Close();
-                    var f2 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_open.txt"));
-                    printer.Print(compare.nr, f2, labeler: compare.Labeler);
-                    f2.WriteLine("---------------");
-                    f2.Close();
+        static void ProcessMismatchResult(List<ASTCompare> compares, ConvertAST converter) {
+            if (mismatch_count > 1000) {
+                throw new Exception();
+            }
+            mismatch_count++;
 
-                    var f3 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-compares.txt"));
-                    foreach (var result in compare.Results) {
-                        f3.WriteLine("=============");
-                        f3.WriteLine(result.ResultType);
-                        f3.WriteLine("-------------" + result.A?.GetType());
-                        printer.Print(result.A, f3, max_depth: 1, labeler: compare.Labeler);
-                        f3.WriteLine();
-                        f3.WriteLine("-------------" + result.B?.GetType());
-                        printer.Print(result.B, f3, max_depth: 1, labeler: compare.Labeler);
-                        f3.WriteLine();
-                    }
-                    f3.Close();
+            int mismatch_id = 0;
+            foreach (var compare in compares) {
+                mismatch_id += 1;
+                var path = "mismatch-" + DMAST.ASTHasher.Hash((dynamic)compare.nl) as string;
+                path = path.Replace("/", "@");
+                var dir_path = Path.Combine(working_dir.FullName, path);
+                Directory.CreateDirectory(dir_path);
+                DMAST.DMASTNodePrinter printer = new();
+                File.WriteAllText(Path.Combine(dir_path, $"{mismatch_id}-nodes_clopen.txt"), converter.clopen_to_closed_node[compare.nl].PrintLeaves(20));
+                var f1 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_clopen.txt"));
+                printer.Print(compare.nl, f1, labeler: compare.Labeler);
+                f1.Close();
+                var f2 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_open.txt"));
+                printer.Print(compare.nr, f2, labeler: compare.Labeler);
+                f2.WriteLine("---------------");
+                f2.Close();
+
+                var f3 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-compares.txt"));
+                foreach (var result in compare.Results) {
+                    f3.WriteLine("=============");
+                    f3.WriteLine(result.ResultType);
+                    f3.WriteLine("-------------" + result.A?.GetType());
+                    printer.Print(result.A, f3, max_depth: 1, labeler: compare.Labeler);
+                    f3.WriteLine();
+                    f3.WriteLine("-------------" + result.B?.GetType());
+                    printer.Print(result.B, f3, max_depth: 1, labeler: compare.Labeler);
+                    f3.WriteLine();
                 }
+                f3.Close();
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using DMCompiler.Compiler.DM;
+using OpenDreamShared.Dream;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -36,22 +37,25 @@ namespace ClopenDream {
                             if (switchbody.Leaves[switch_cnode].Labels.Contains("SwitchIfHeader")) {
                                 var switch_if_header = switchbody.Leaves[switch_cnode];
                                 var switch_if_body = switchbody.Leaves[switch_cnode + 1];
-                                if (switch_if_header.Leaves[0].Tags.ContainsKey("blank")) {
-                                    var maybe_to = switch_if_header.Leaves[0].IgnoreBlank();
-                                    if (maybe_to.CheckTag("operator", "to")) {
-                                        var switch_range = new DMASTSwitchCaseRange(node.Location, GetExpression(maybe_to.Leaves[0]), GetExpression(maybe_to.Leaves[1]));
-                                        cases.Add(new DMASTProcStatementSwitch.SwitchCaseValues(new DMASTExpression[1] { switch_range }, GetProcBlockInner(switch_if_body.Leaves)));
-                                        switch_cnode += 2;
-                                        continue;
+                                switch_cnode += 1;
+                                List<DMASTExpression> switch_case_values = new();
+                                foreach(var switch_leaf in switch_if_header.Leaves) {
+                                    if (switch_leaf.Tags.ContainsKey("blank")) {
+                                        var maybe_to = switch_if_header.Leaves[0].IgnoreBlank();
+                                        if (maybe_to.CheckTag("operator", "to")) {
+                                            switch_case_values.Add( new DMASTSwitchCaseRange(node.Location, GetExpression(maybe_to.Leaves[0]), GetExpression(maybe_to.Leaves[1])));
+                                        } else {
+                                            switch_case_values.Add( GetExpression(switch_leaf));
+                                        }
+                                    } else {
+                                        switch_case_values.Add(GetExpression(switch_leaf));
                                     }
                                 }
-                                List<DMASTExpression> values = switch_if_header.Leaves.Select((n) => GetExpression(n)).ToList();
-                                switch_cnode += 1;
                                 if (switchbody.Leaves[switch_cnode].Labels.Contains("SwitchIfBody")) {
                                     switch_if_body = switchbody.Leaves[switch_cnode];
                                     switch_cnode += 1;
                                 }
-                                cases.Add(new DMASTProcStatementSwitch.SwitchCaseValues(values.ToArray(), GetProcBlockInner(switch_if_body.Leaves)));
+                                cases.Add(new DMASTProcStatementSwitch.SwitchCaseValues(switch_case_values.ToArray(), GetProcBlockInner(switch_if_body.Leaves)));
                             }
                             else if (switchbody.Leaves[switch_cnode].Labels.Contains("SwitchElseBody")) {
                                 cases.Add(new DMASTProcStatementSwitch.SwitchCaseDefault(GetProcBlockInner(switchbody.Leaves[switch_cnode].Leaves)));
@@ -106,7 +110,7 @@ namespace ClopenDream {
                         throw catchnode.Error("expected CatchBody");
                     }
                     cnode += 1;
-                    catchbody = GetProcBlockInner(node.Leaves);
+                    catchbody = GetProcBlockInner(catchnode.Leaves);
                     yield return new DMASTProcStatementTryCatch(node.Location, trybody, catchbody, catchexpr);
 
                 }
@@ -268,6 +272,7 @@ namespace ClopenDream {
                 procVarPathStack.Push(node);
                 DMASTExpression expr = new DMASTConstantNull(node.Location);
                 var index_modifier = false;
+                DMASTExpression array_size = null;
                 foreach (var subnode in node.Leaves) {
                     var modnode = subnode.UniqueLeaf();
                     if (modnode == null) {
@@ -279,6 +284,9 @@ namespace ClopenDream {
                     // TODO handle a sized array correctly
                     else if (modnode.Labels.Contains("IndexModifier")) {
                         index_modifier = true;
+                        if (modnode.Leaves.Count > 0) {
+                            array_size = GetExpression(modnode.Leaves[0]);
+                        }
                     }
                     else if (modnode.Labels.Contains("AsModifier")) {
                         // TODO handle this
@@ -291,10 +299,21 @@ namespace ClopenDream {
                     }
 
                 }
-                var path = new DMASTPath(node.Location, ExtractPath(procVarPathStack));
-                if (index_modifier)
-                {
-                    path = new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath($"var/list/{node.Tags["bare"]}") );
+                var dpath = ExtractPath(procVarPathStack);
+                dpath.Type = DreamPath.PathType.Relative;
+                while (dpath.FindElement("var") == 0) {
+                    dpath = dpath.RemoveElement(0);
+                }
+                var path = new DMASTPath(node.Location, new DreamPath($"var").Combine(dpath));
+                if (index_modifier) {
+                    if (dpath.FindElement("list") == -1) {
+                        path = new DMASTPath(node.Location, new DreamPath($"var/list").Combine(dpath));
+                    }
+                    if (array_size != null) {
+                        var paras = new DMASTCallParameter[1];
+                        paras[0] = new DMASTCallParameter(node.Location, array_size);
+                        expr = new DMASTNewPath(node.Location, new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath("/list")) ,paras);
+                    }
                 }
                 var define = new DMASTProcStatementVarDeclaration(node.Location, path, expr);
                 yield return define;
@@ -417,16 +436,16 @@ namespace ClopenDream {
                         var list_expr = GetExpression(for_expr.Leaves[1]);
                         return (new DMASTProcStatementForList(for_node.Location, initializer, new DMASTIdentifier(for_node.Location, for_name[0]), list_expr, body), cnode);
                     }
-                    else {
+                    else if (for_expr.Tags.ContainsKey("ident")) {
                         var body_node = for_node.Next();
                         DMASTProcBlockInner body = null;
                         if (body_node != null && body_node.Labels.Contains("ForBody")) {
                             cnode += 1;
                             body = GetProcBlockInner(body_node.Leaves);
                         }
-                        var placeholder = new DMASTProcStatementExpression(for_node.Location, new DMASTConstantString(for_node.Location, "This is a ForBody placeholder") );
-                        return (placeholder, cnode);
-                        //return (new DMASTProcStatementFor(for_node.Location, new DMASTProcStatementExpression(for_node.Location, GetExpression(for_expr)), body), cnode); 
+                        var loop_in_world = new DMASTProcStatementForList(for_node.Location, initializer,
+                           new DMASTIdentifier(for_expr.Location, (for_expr.Tags["ident"] as string[])[0]), new DMASTIdentifier(for_node.Location, "world"), body);
+                        return (loop_in_world, cnode);
                     }
                 }
                 throw for_node.Error("invalid for loop");

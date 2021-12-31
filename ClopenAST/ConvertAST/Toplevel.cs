@@ -67,12 +67,8 @@ namespace ClopenDream {
         DMASTProcDefinition GetProcDecl(Node n, Stack<Node> pathStack) {
             pathStack.Push(n);
             var path = ExtractPath(pathStack);
-//            Console.WriteLine("GetProcDecl \"" + path + "\"");
             ProcNode = n;
             var body = GetProcBlockInner(n.Leaves.Skip(1).ToList());
-            if (n.Leaves.Count == 1) {
-                body = null;
-            }
             var procdef = new DMASTProcDefinition(n.Location, path, GetProcParameters(n.Leaves[0]), body);
             AssociateNodes(n, procdef);
             VisitDefine(n, procdef);
@@ -159,6 +155,7 @@ namespace ClopenDream {
                 DMASTExpression expr = new DMASTConstantNull(node.Location);
                 var val_type = OpenDreamShared.Dream.Procs.DMValueType.Anything;
                 var index_modifier = false;
+                DMASTExpression array_size = null;
                 foreach (var subnode in node.Leaves) {
                     var modnode = subnode.UniqueLeaf();
                     if (modnode == null) {
@@ -170,6 +167,9 @@ namespace ClopenDream {
                     // TODO handle a sized array correctly
                     else if (modnode.Labels.Contains("IndexModifier")) {
                         index_modifier = true;
+                        if (modnode.Leaves.Count > 0) {
+                            array_size = GetExpression(modnode.Leaves[0]);
+                        }
                     }
                     else if (modnode.Labels.Contains("AsModifier")) {
                         val_type = ConvertDMValueType(modnode.Leaves[0]);
@@ -179,12 +179,29 @@ namespace ClopenDream {
                     }
 
                 }
-                var path = ExtractPath(pathStack);
-                if (index_modifier)
-                {
-                    path = new OpenDreamShared.Dream.DreamPath($"var/list/{node.Tags["bare"]}");
+                var dpath = ExtractPath(pathStack);
+                if (index_modifier) {
+                    if (dpath.FindElement("list") == -1 && dpath.FindElement("var") != -1) {
+                        int? var_pos = null;
+                        while (dpath.FindElement("var") != -1) {
+                            if (var_pos == null) { var_pos = dpath.FindElement("var"); }
+                            dpath = dpath.RemoveElement(dpath.FindElement("var"));
+                        }
+                        var l_path = dpath.FromElements(0, var_pos.Value);
+                        l_path.Type = dpath.Type;
+
+                        var r_path = dpath.FromElements(var_pos.Value);
+                        r_path.Type = DreamPath.PathType.Relative;
+
+                        dpath = l_path.Combine( new DreamPath($"var/list")).Combine( r_path );
+                    }
+                    if (array_size != null) {
+                        var paras = new DMASTCallParameter[1];
+                        paras[0] = new DMASTCallParameter(node.Location, array_size);
+                        expr = new DMASTNewPath(node.Location, new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath("/list")), paras);
+                    }
                 }
-                var define = new DMASTObjectVarDefinition(node.Location, path, expr, valType:val_type);
+                var define = new DMASTObjectVarDefinition(node.Location, dpath, expr, valType:val_type);
                 AssociateNodes(node, define);
                 VisitDefine(node, define);
                 yield return define;

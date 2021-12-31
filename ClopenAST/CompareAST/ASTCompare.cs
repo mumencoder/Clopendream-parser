@@ -60,6 +60,13 @@ namespace ClopenDream {
             if (node_r is DMASTProcStatementInfLoop) {
                 return null;
             }
+            // TODO: temporary fix
+            if (node_l is DMASTProcStatementExpression ast_pse && node_r is DMASTProcStatementVarDeclaration ast_psvd) {
+                if (ast_pse.Expression is DMASTIdentifier id && id.Identifier == ast_psvd.Name) {
+                    return null;
+                }
+                return new(node_l, node_r, $"node mismatch");
+            }
             if (compare_ty.IsAssignableTo(typeof(DMASTNode)) || compare_ty.IsAssignableTo(typeof(DMASTCallable))) {
                 // Note byond truncates .0 for constants
                 if (node_l is DMASTConstantInteger || node_r is DMASTConstantFloat) {
@@ -74,6 +81,10 @@ namespace ClopenDream {
                     return null;
                 }
             }
+            // byond optimizes ternary expressions
+            if (node_l is DMASTProcStatementIf if_node && node_r is DMASTProcStatementExpression stexpr && stexpr.Expression is DMASTTernary) {
+                return null;
+            }
 
             if (node_l.GetType() != node_r.GetType()) { return new(node_l, node_r, "type mismatch"); }
 
@@ -81,7 +92,7 @@ namespace ClopenDream {
                 return null;
             }
             if (node_l is float fl && node_r is float fr) {
-                if (Math.Abs(fl - fr) > (1 / 1024.0)) {
+                if (Math.Min(fl,fr) / Math.Max(fl,fr) < 0.99) {
                     return new(node_l, node_r, $"float mismatch {Math.Abs(fl - fr)}");
                 }
                 return null;
@@ -91,15 +102,6 @@ namespace ClopenDream {
                     return new(node_l, node_r, "equality mismatch", $"{node_l.GetType().FullName}");
                 }
                 return null;
-            }
-            // byond optimizes ternary expressions
-            if (node_l is DMASTProcStatementIf if_node && node_r is DMASTProcStatementExpression stexpr) {
-                if (if_node.Condition is DMASTNot && stexpr.Expression is DMASTTernary t) {
-                    if (t.B is DMASTConstantNull) {
-                        return null;
-                    }
-                }
-                return new(node_l, node_r, "field mismatch", $"{node_l.GetType().FullName}");
             }
 
             if (compare_ty.IsAssignableTo(typeof(DMASTNode))) { return null; }
@@ -117,6 +119,19 @@ namespace ClopenDream {
                 // note sometimes null, sometimes not in OD
                 if (node_l is DMASTConstantNull || node_r is DMASTConstantNull) {
                     return true;
+                }
+                if (node_l is DMASTProcBlockInner ast_pbi) {
+                    if (ast_pbi.Statements.Length == 0) {
+                        return true;
+                    }
+                    return false;
+                }
+                if (node_l is DMASTProcStatementExpression node_pse) {
+                    if (node_pse.Expression is DMASTConstantNull) {
+                        return true;
+                    }
+                    Results.Add(new(node_l, node_r, "null mismatch"));
+                    return false;
                 }
                 if (node_l is DMASTCallParameter[] || node_r is DMASTCallParameter[]) {
                     return true;
