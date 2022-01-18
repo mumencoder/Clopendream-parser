@@ -3,6 +3,12 @@ using System;
 
 namespace ClopenDream {
 
+    public class ByondCompileError : System.Exception {
+        public string Text;
+        public ByondCompileError(string t) {
+            Text = t;
+        }
+    }
     public partial class Parser {
         public string ParseTopLevel() {
             if (_cText[0] == '\t') {
@@ -22,7 +28,7 @@ namespace ClopenDream {
                             return _cText;
                         }
                         if (warn == "error") {
-                            return _cText;
+                            throw new ByondCompileError(_cText);
                         }
                     }
                 }
