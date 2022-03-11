@@ -25,22 +25,11 @@ namespace ClopenDream {
 
             DMCompiler.DMCompiler.Settings.SuppressUnimplementedWarnings = true;
 
-            var command = new Command("compile") {
+            var command = new Command("parse") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
-                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Output directory" ),
-                new Option<FileInfo>("--dm_original", "Original DM file")
             };
             command.Description = "Compile a DM file to OpenDream JSON";
-            command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, FileInfo>(Compile_Handler);
-            rootCommand.AddCommand(command);
-
-            command = new Command("test-parse") {
-                new Argument<FileInfo>("byond_codetree", "Input code tree"),
-                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
-                new Option<FileInfo>("--dm_original", "Original DM file")
-            };
-            command.Description = "Parse a DM file";
-            command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, FileInfo>(Test_Parse_Handler);
+            command.Handler = CommandHandler.Create<FileInfo>(Parse_Handler);
             rootCommand.AddCommand(command);
 
             command = new Command("object-hash") {
@@ -67,18 +56,13 @@ namespace ClopenDream {
             return return_code;
         }
 
-        static void Compile_Handler(FileInfo byond_codetree, DirectoryInfo working_dir, FileInfo dm_original) {
-            Program.working_dir = working_dir;
-            ClopenParse(byond_codetree, null, out DMASTFile ast);
-            return_code = DMCompiler.DMCompiler.CompileAST(ast);
-        }
-
-        static void Test_Parse_Handler(FileInfo byond_codetree, DirectoryInfo working_dir, FileInfo dm_original) {
-            Program.working_dir = working_dir;
+        static void Parse_Handler(FileInfo byond_codetree) {
+            Program.working_dir = byond_codetree.Directory;
             if (ClopenParse(byond_codetree, null, out DMASTFile ast)) {
                 return_code = 0;
-            }
-            else {
+                var astSrslr = new DMASTSerializer(ast);
+                File.WriteAllText(Path.Combine(working_dir.FullName, "clopen_ast.json"), astSrslr.Result);
+            } else {
                 return_code = 1;
             }
         }
