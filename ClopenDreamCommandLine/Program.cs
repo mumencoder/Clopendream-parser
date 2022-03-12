@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -13,6 +14,7 @@ namespace ClopenDream {
 
         static DirectoryInfo working_dir;
         static DMCompilerState open_compile;
+        static Dictionary<string, string> config;
 
         static dynamic json_output = new ExpandoObject();
         static int mismatch_count = 0;
@@ -27,9 +29,10 @@ namespace ClopenDream {
 
             var command = new Command("parse") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
+                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
             };
-            command.Description = "Compile a DM file to OpenDream JSON";
-            command.Handler = CommandHandler.Create<FileInfo>(Parse_Handler);
+            command.Description = "Parse and serialize a codetree file";
+            command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo>(Parse_Handler);
             rootCommand.AddCommand(command);
 
             command = new Command("object-hash") {
@@ -50,18 +53,20 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Compare_Handler);
             rootCommand.AddCommand(command);
 
+            var config_path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            config = JsonConvert.DeserializeObject<Dictionary<string,string>>(File.ReadAllText(config_path));
             rootCommand.Invoke(args);
             File.WriteAllText(Path.Combine(working_dir.FullName, "clopen_result.json"), JsonConvert.SerializeObject(json_output));
 
             return return_code;
         }
 
-        static void Parse_Handler(FileInfo byond_codetree) {
-            Program.working_dir = byond_codetree.Directory;
+        static void Parse_Handler(FileInfo byond_codetree, DirectoryInfo working_dir) {
+            Program.working_dir = working_dir;
             if (ClopenParse(byond_codetree, null, out DMASTFile ast)) {
                 return_code = 0;
                 var astSrslr = new DMASTSerializer(ast);
-                File.WriteAllText(Path.Combine(working_dir.FullName, "clopen_ast.json"), astSrslr.Result);
+                File.WriteAllText(Path.Combine(byond_codetree.Directory.FullName, "clopen_ast.json"), astSrslr.Result);
             } else {
                 return_code = 1;
             }
@@ -147,9 +152,9 @@ namespace ClopenDream {
             }
             root.FixLabels();
 
-            string filename = Path.Combine(working_dir.FullName, "empty.dm");
+            string filename = Path.Combine(config["empty_dir"], "empty.dm");
             DMCompilerState empty_compile = DMCompiler.DMCompiler.GetAST(new() { filename });
-            FileInfo empty_code_tree = new FileInfo(Path.Combine(working_dir.FullName, "empty.out.txt"));
+            FileInfo empty_code_tree = new FileInfo(Path.Combine(config["empty_dir"], "empty.codetree"));
             Node empty_root = p.BeginParse(empty_code_tree.OpenText());
             empty_root.FixLabels();
             new FixEmpty(empty_root, root).Begin();
@@ -167,7 +172,6 @@ namespace ClopenDream {
             }
             json_output.mismatch_count = mismatch_count;
             json_output.mismatch_output = mismatch_output;
-            json_output.open_compile_errors = open_compile.parserErrors;
             json_output.empty_compile_errors = empty_compile.parserErrors;
             return true;
         }
