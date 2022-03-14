@@ -6,65 +6,44 @@ using DMCompiler.DM.Visitors;
 
 namespace ClopenDream {
     public class ASTComparer {
-        DMASTSimplifier simplify = new();
-
-        DMAST.ASTHasher _openAstHash = new();
         public Action<List<ASTCompare>> MismatchEvent = (_) => { };
 
-        public ASTComparer(DMAST.ASTHasher open_ast_hash) {
-            _openAstHash = open_ast_hash;
+        DMASTFile Ast1;
+        DMASTFile Ast2;
+
+        DMAST.ASTHasher AstHash1;
+        DMAST.ASTHasher AstHash2;
+
+        public ASTComparer(DMASTNode ast1, DMASTNode ast2) {
+            Ast1 = ast1 as DMASTFile;
+            Ast2 = ast2 as DMASTFile;
+            AstHash1 = new DMAST.ASTHasher();
+            AstHash1.HashFile(Ast1);
+            AstHash2 = new DMAST.ASTHasher();
+            AstHash2.HashFile(Ast2);
         }
 
-        public void CompareTopLevel(DMAST.ASTHasher l_hash, DMAST.ASTHasher r_hash) {
-            var def_n = 0;
-            var missing_n = 0;
-            List<(DMASTNode, DMASTNode)> mismatches = new();
-
-            foreach (var kv in l_hash.nodes) {
-                def_n += 1;
-                if (!r_hash.nodes.ContainsKey(kv.Key)) {
-                    missing_n += 1;
-                }
-                else {
-                    var lnl = l_hash.nodes[kv.Key];
-                    var lnr = r_hash.nodes[kv.Key];
-                    if (lnl.Count != lnr.Count) {
-                        //mismatches.Add((lnl, lnr));
-                    }
-                    if (lnl.GetType() != lnr.GetType()) {
-                    }
-                }
-            }
-            def_n = 0;
-            missing_n = 0;
-            foreach (var kv in r_hash.nodes) {
-                def_n += 1;
-                if (!l_hash.nodes.ContainsKey(kv.Key)) {
-                    missing_n += 1;
-                }
-            }
+        public void CompareAll() {
+            new DMDefineVisitor(DefineComparer).VisitFile(Ast1);
         }
-
-        public void DefineComparer(DMASTNode node) {
-            var orig_nodes = _openAstHash.GetNode(node);
-            if (orig_nodes == null) {
-                Console.WriteLine($"{node.Location}: missing {DMAST.ASTHasher.Hash(node as dynamic)}");
+        public void DefineComparer(DMASTNode node1) {
+            var nodes2 = AstHash2.GetNode(node1);
+            if (nodes2 == null) {
+                Console.WriteLine($"{node1.Location}: missing {DMAST.ASTHasher.Hash(node1 as dynamic)}");
                 return;
             }
             var found_match = false;
 
             List<ASTCompare> compares = new();
-            simplify.SimplifyAST(node);
-            foreach (var orig_node in orig_nodes) {
-                simplify.SimplifyAST(orig_node);
-                var compare = new ASTCompare(node, orig_node);
+            foreach (var node2 in nodes2) {
+                var compare = new ASTCompare(node1, node2);
                 if (compare.Success) {
                     found_match = true;
                 }
                 compares.Add(compare);
             }
             if (found_match == false) {
-                Console.WriteLine($"{node.Location}: mismatch {DMAST.ASTHasher.Hash(node as dynamic)}");
+                Console.WriteLine($"{node1.Location}: mismatch {DMAST.ASTHasher.Hash(node1 as dynamic)}");
                 MismatchEvent(compares);
             }
         }

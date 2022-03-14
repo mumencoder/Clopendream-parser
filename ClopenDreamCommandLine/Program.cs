@@ -35,6 +35,15 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo>(Parse_Handler);
             rootCommand.AddCommand(command);
 
+            command = new Command("compare") {
+                new Argument<FileInfo>("codetree_1", "Codetree #1"),
+                new Argument<FileInfo>("codetree_2", "Codetree #2"),
+                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
+            };
+            command.Description = "Compare two serialized ASTs";
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Compare_Handler);
+            rootCommand.AddCommand(command);
+
             command = new Command("object-hash") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
                 new Argument<FileInfo>("dm_original", "Original DM file"),
@@ -42,15 +51,6 @@ namespace ClopenDream {
             };
             command.Description = "Write define hashes to file";
             command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Test_Object_Hash);
-            rootCommand.AddCommand(command);
-
-            command = new Command("compare") {
-                new Argument<FileInfo>("byond_codetree", "Input code tree"),
-                new Argument<FileInfo>("dm_original", "Original DM file"),
-                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
-            };
-            command.Description = "Compare AST for clopendream and opendream";
-            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Compare_Handler);
             rootCommand.AddCommand(command);
 
             var config_path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
@@ -63,7 +63,7 @@ namespace ClopenDream {
 
         static void Parse_Handler(FileInfo byond_codetree, DirectoryInfo working_dir) {
             Program.working_dir = working_dir;
-            if (ClopenParse(byond_codetree, null, out DMASTFile ast)) {
+            if (ClopenParse(byond_codetree, out DMASTFile ast)) {
                 return_code = 0;
                 var astSrslr = new DMASTSerializer(ast);
                 File.WriteAllText(Path.Combine(byond_codetree.Directory.FullName, "clopen_ast.json"), astSrslr.Result);
@@ -72,11 +72,26 @@ namespace ClopenDream {
             }
         }
 
+        static void Compare_Handler(FileInfo codetree_1, FileInfo codetree_2, DirectoryInfo working_dir) {
+            Program.working_dir = working_dir;
+            try {
+                JsonSerializerSettings settings = new() { TypeNameHandling = TypeNameHandling.All,   ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor };
+                DMASTFile ast1 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(codetree_1.FullName), settings);
+                DMASTFile ast2 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(codetree_2.FullName), settings);
+                CompareAST(ast1, ast2);
+                return_code = 0;
+            } catch (Exception e) {
+                json_output.uncaught_exception = true;
+                Console.WriteLine(e.ToString());
+                return_code = 1;
+            }
+        }
+
         static void Test_Object_Hash(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
             Program.working_dir = working_dir;
             //DMCompiler.DMCompiler.Settings.ExperimentalPreproc = true;
 
-            if (!ClopenParse(byond_codetree, null, out var clopen_ast)) {
+            if (!ClopenParse(byond_codetree, out var clopen_ast)) {
                 return_code = 1;
                 return;
             }
@@ -100,47 +115,8 @@ namespace ClopenDream {
 
             return_code = 0;
         }
-        static void Compare_Handler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
-            try {
-                Program.working_dir = working_dir;
-                //DMCompiler.DMCompiler.Settings.ExperimentalPreproc = false;
-                open_compile = DMCompiler.DMCompiler.GetAST(new() { dm_original.FullName });
-                if (!ClopenParse(byond_codetree, Program.Compare, out var ast)) {
-                    return_code = 1;
-                    return;
-                };
-                return_code = 0;
-            } catch (Exception e) {
-                json_output.uncaught_exception = true;
-                Console.WriteLine(e.ToString() );
-                return_code = 1;
-            }
-        }
-        static void Compare_Handler_ODFirst(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
-            Program.working_dir = working_dir;
-            //DMCompiler.DMCompiler.Settings.ExperimentalPreproc = false;
-            open_compile = DMCompiler.DMCompiler.GetAST(new() { dm_original.FullName });
-            if (!ClopenParse(byond_codetree, null, out var clopen_AST)) {
-                return_code = 1;
-                return;
-            }
 
-            var openHash = new DMAST.ASTHasher();
-            openHash.HashFile(open_compile.ast);
-
-            var clopenHash = new DMAST.ASTHasher();
-            clopenHash.HashFile(clopen_AST);
-
-            var compare = new ASTComparer(clopenHash);
-            foreach(var nodes in openHash.nodes.Values) {
-                foreach(var node in nodes) {
-                    compare.DefineComparer(node);
-                }
-            }
-            return_code = 0;
-        }
-
-        static bool ClopenParse(FileInfo byond_codetree, Action<ConvertAST> handler, out DMASTFile ast_clopen) {
+        static bool ClopenParse(FileInfo byond_codetree, out DMASTFile ast_clopen) {
             Parser p = new();
             ast_clopen = null;
             Node root = null;
@@ -154,13 +130,13 @@ namespace ClopenDream {
 
             string filename = Path.Combine(config["empty_dir"], "empty.dm");
             DMCompilerState empty_compile = DMCompiler.DMCompiler.GetAST(new() { filename });
+            json_output.empty_compile_errors = empty_compile.parserErrors;
             FileInfo empty_code_tree = new FileInfo(Path.Combine(config["empty_dir"], "empty.codetree"));
             Node empty_root = p.BeginParse(empty_code_tree.OpenText());
             empty_root.FixLabels();
             new FixEmpty(empty_root, root).Begin();
 
             var converter = new ConvertAST();
-            if (handler != null) { handler(converter); }
 
             try {
                 ast_clopen = converter.GetFile(root);
@@ -170,28 +146,17 @@ namespace ClopenDream {
                 Console.WriteLine(converter.ProcNode.PrintLeaves(3));
                 throw;
             }
-            json_output.mismatch_count = mismatch_count;
-            json_output.mismatch_output = mismatch_output;
-            json_output.empty_compile_errors = empty_compile.parserErrors;
             return true;
         }
 
-        static void Compare(ConvertAST converter) {
-            ASTComparer comparer;
-
-            var open_hasher = new DMAST.ASTHasher();
-            open_hasher.HashFile(open_compile.ast);
-            comparer = new ASTComparer(open_hasher);
-            converter.VisitDefine = DefineCompare;
-            comparer.MismatchEvent = (x) => ProcessMismatchResult(x, converter);
-            json_output.mismatch_count = 0;
-
-            void DefineCompare(Node n, DMASTNode node) {
-                comparer.DefineComparer(node);
-            }
+        static void CompareAST(DMASTFile ast1, DMASTFile ast2) {
+            ASTComparer comparer = new ASTComparer(ast1, ast2);
+            comparer.MismatchEvent = (_) => ProcessMismatchResult(_);
+            json_output.mismatch_count = mismatch_count;
+            json_output.mismatch_output = mismatch_output;
         }
 
-        static void ProcessMismatchResult(List<ASTCompare> compares, ConvertAST converter) {
+        static void ProcessMismatchResult(List<ASTCompare> compares) {
             if (mismatch_count > 1000) {
                 throw new Exception();
             }
@@ -206,7 +171,6 @@ namespace ClopenDream {
                 var dir_path = Path.Combine(working_dir.FullName, path);
                 Directory.CreateDirectory(dir_path);
                 DMAST.DMASTNodePrinter printer = new();
-                File.WriteAllText(Path.Combine(dir_path, $"{mismatch_id}-nodes_clopen.txt"), converter.clopen_to_closed_node[compare.nl].PrintLeaves(20));
                 var f1 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_clopen.txt"));
                 printer.Print(compare.nl, f1, labeler: compare.Labeler);
                 f1.Close();
