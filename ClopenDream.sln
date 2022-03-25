@@ -13,6 +13,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenDreamShared", "OpenDrea
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Robust.Shared", "OpenDream\RobustToolbox\Robust.Shared\Robust.Shared.csproj", "{A8C6CA7F-35D7-4C5B-B207-87E9809F96ED}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Robust.Shared.Maths", "OpenDream\RobustToolbox\Robust.Shared.Maths\Robust.Shared.Maths.csproj", "{DFBAB30C-EF95-4F84-A1E0-345F15993562}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Robust.Physics", "OpenDream\RobustToolbox\Robust.Physics\Robust.Physics.csproj", "{008463E6-AED0-4F64-9A8F-5BD5924AAD44}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lidgren.Network", "OpenDream\RobustToolbox\Lidgren.Network\Lidgren.Network.csproj", "{928FF00B-51F0-4873-8D80-D94ECB909C4A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetSerializer", "OpenDream\RobustToolbox\NetSerializer\NetSerializer\NetSerializer.csproj", "{79E0CB62-4AEA-4928-9E8D-ABB68F0D9E7D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +47,22 @@ Global
 		{A8C6CA7F-35D7-4C5B-B207-87E9809F96ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8C6CA7F-35D7-4C5B-B207-87E9809F96ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8C6CA7F-35D7-4C5B-B207-87E9809F96ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFBAB30C-EF95-4F84-A1E0-345F15993562}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFBAB30C-EF95-4F84-A1E0-345F15993562}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFBAB30C-EF95-4F84-A1E0-345F15993562}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFBAB30C-EF95-4F84-A1E0-345F15993562}.Release|Any CPU.Build.0 = Release|Any CPU
+		{008463E6-AED0-4F64-9A8F-5BD5924AAD44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{008463E6-AED0-4F64-9A8F-5BD5924AAD44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{008463E6-AED0-4F64-9A8F-5BD5924AAD44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{008463E6-AED0-4F64-9A8F-5BD5924AAD44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{928FF00B-51F0-4873-8D80-D94ECB909C4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{928FF00B-51F0-4873-8D80-D94ECB909C4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{928FF00B-51F0-4873-8D80-D94ECB909C4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{928FF00B-51F0-4873-8D80-D94ECB909C4A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79E0CB62-4AEA-4928-9E8D-ABB68F0D9E7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79E0CB62-4AEA-4928-9E8D-ABB68F0D9E7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79E0CB62-4AEA-4928-9E8D-ABB68F0D9E7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79E0CB62-4AEA-4928-9E8D-ABB68F0D9E7D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
