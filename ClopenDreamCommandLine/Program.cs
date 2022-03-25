@@ -36,12 +36,11 @@ namespace ClopenDream {
             rootCommand.AddCommand(command);
 
             command = new Command("compare") {
-                new Argument<FileInfo>("codetree_1", "Codetree #1"),
-                new Argument<FileInfo>("codetree_2", "Codetree #2"),
-                new Argument<FileInfo>("output_json", "Output json")
+                new Argument<FileInfo>("input_config_path", "Input config"),
+                new Argument<FileInfo>("output_json_path", "Output json")
             };
             command.Description = "Compare two serialized ASTs";
-            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Compare_Handler);
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo>(Compare_Handler);
             rootCommand.AddCommand(command);
 
             rootCommand.Invoke(args);
@@ -57,21 +56,22 @@ namespace ClopenDream {
         }
         static void Parse_Handler(FileInfo input_config_path, FileInfo output_json_path) {
             Startup(input_config_path);
-            if (ClopenParse(input_config["byond_codetree"], out DMASTFile ast)) {
+            if (ClopenParse(input_config["byond_codetree_path"], out DMASTFile ast)) {
                 return_code = 0;
                 var astSrslr = new DMASTSerializer(ast);
                 File.WriteAllText(input_config["ast_path"], astSrslr.Result);
-                Shutdown(output_json_path);
             } else {
                 return_code = 1;
             }
+            Shutdown(output_json_path);
         }
 
-        static void Compare_Handler(FileInfo codetree_1, FileInfo codetree_2, DirectoryInfo working_dir) {
+        static void Compare_Handler(FileInfo input_config_path, FileInfo output_json_path) {
+            Startup(input_config_path);
             try {
                 JsonSerializerSettings settings = new() { TypeNameHandling = TypeNameHandling.All,   ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor };
-                DMASTFile ast1 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(codetree_1.FullName), settings);
-                DMASTFile ast2 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(codetree_2.FullName), settings);
+                DMASTFile ast1 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(input_config["ast_1"]), settings);
+                DMASTFile ast2 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(input_config["ast_2"]), settings);
                 CompareAST(ast1, ast2);
                 return_code = 0;
             } catch (Exception e) {
@@ -79,12 +79,11 @@ namespace ClopenDream {
                 Console.WriteLine(e.ToString());
                 return_code = 1;
             }
+            Shutdown(output_json_path);
         }
 
         static void Test_Object_Hash(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
-            //DMCompiler.DMCompiler.Settings.ExperimentalPreproc = true;
-
-            if (!ClopenParse(input_config["byond_codetree"], out var clopen_ast)) {
+            if (!ClopenParse(input_config["byond_codetree_path"], out var clopen_ast)) {
                 return_code = 1;
                 return;
             }
