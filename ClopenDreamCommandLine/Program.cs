@@ -69,7 +69,7 @@ namespace ClopenDream {
         static void Compare_Handler(FileInfo input_config_path, FileInfo output_json_path) {
             Startup(input_config_path);
             try {
-                JsonSerializerSettings settings = new() { TypeNameHandling = TypeNameHandling.All,   ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor };
+                JsonSerializerSettings settings = new() { TypeNameHandling = TypeNameHandling.All, MaxDepth = 1024, ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor };
                 DMASTFile ast1 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(input_config["ast_1"]), settings);
                 DMASTFile ast2 = JsonConvert.DeserializeObject<DMASTFile>(File.ReadAllText(input_config["ast_2"]), settings);
                 CompareAST(ast1, ast2);
@@ -144,6 +144,7 @@ namespace ClopenDream {
         static void CompareAST(DMASTFile ast1, DMASTFile ast2) {
             ASTComparer comparer = new ASTComparer(ast1, ast2);
             comparer.MismatchEvent = (_) => ProcessMismatchResult(_);
+            comparer.CompareAll();
             json_output.mismatch_count = mismatch_count;
             json_output.mismatch_output = mismatch_output;
         }
