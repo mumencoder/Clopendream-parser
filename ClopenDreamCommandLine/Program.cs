@@ -33,6 +33,15 @@ namespace ClopenDream {
             command.Handler = CommandHandler.Create<FileInfo, DirectoryInfo, FileInfo>(Test_Parse_Handler);
             rootCommand.AddCommand(command);
 
+            command = new Command("object-hash") {
+                new Argument<FileInfo>("byond_codetree", "Input code tree"),
+                new Argument<FileInfo>("dm_original", "Original DM file"),
+                new Option<DirectoryInfo>("--working_dir", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()), "Directory containing empty.dm" ),
+            };
+            command.Description = "Write define hashes to file";
+            command.Handler = CommandHandler.Create<FileInfo, FileInfo, DirectoryInfo>(Test_Object_Hash);
+            rootCommand.AddCommand(command);
+
             command = new Command("compare") {
                 new Argument<FileInfo>("byond_codetree", "Input code tree"),
                 new Argument<FileInfo>("dm_original", "Original DM file"),
@@ -58,8 +67,32 @@ namespace ClopenDream {
             return 0;
         }
 
+        static int Test_Object_Hash(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
+            Program.working_dir = working_dir;
+            DMASTFile clopen_ast = ClopenParse(byond_codetree, null);
+            DMASTFile open_ast = GetAST(dm_original.FullName);
+
+            var clopen_hasher = new DMAST.ASTHasher();
+            clopen_hasher.HashFile(clopen_ast);
+            var f1 = File.CreateText(Path.Combine(working_dir.FullName, $"clopen-defs.txt"));
+            foreach (var h in clopen_hasher.nodes.Keys) {
+                f1.WriteLine(h);
+            }
+            f1.Close();
+
+            var open_hasher = new DMAST.ASTHasher();
+            open_hasher.HashFile(open_ast);
+            var f2 = File.CreateText(Path.Combine(working_dir.FullName, $"open-defs.txt"));
+            foreach (var h in open_hasher.nodes.Keys) {
+                f2.WriteLine(h);
+            }
+            f2.Close();
+
+            return 0;
+        }
         static int Compare_Handler(FileInfo byond_codetree, FileInfo dm_original, DirectoryInfo working_dir) {
             Program.working_dir = working_dir;
+            DMCompiler.DMCompiler.Settings.ExperimentalPreproc = true;
             open_AST = GetAST(dm_original.FullName);
             ClopenParse(byond_codetree, Program.Compare);
             return 0;

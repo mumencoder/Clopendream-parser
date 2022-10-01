@@ -33,6 +33,9 @@ namespace ClopenDream {
                     expr = derefExprStack.Peek();
                     conditional = derefExprCond.Peek();
                 }
+                else if (ident == "global") {
+                    return new DMASTGlobalIdentifier(node.Location, path[2]);
+                }
                 else {
                     expr = new DMASTIdentifier(node.Location, ident);
                 }

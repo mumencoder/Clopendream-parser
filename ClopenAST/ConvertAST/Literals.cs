@@ -86,20 +86,20 @@ namespace ClopenDream {
             return new string(cs.Take<char>(write_pos).ToArray());
         }
 
-        static string[] ignored_escapes = new string[] { "improper", "proper", "The", "red", "green", "Roman", "roman", "he", "she", "himself", "herself", "He", "She", "him", "her", "his", "hers", "icon", "bold", "italic" };
+        static string[] ignored_escapes = new string[] { "improper", "proper", "The", "the", "th", "an", "black", "red", "blue", "green", "Roman", "roman", "he", "she", "himself", "herself", "He", "She", "him", "her", "his", "hers", "icon", "bold", "italic", "s", "a", "A" };
         string EscapeString(string s) {
             if (s == null) { return s; }
 
-            int write_pos = 0;
             int read_pos = 0;
-            char[] cs = s.ToCharArray();
+            string new_s = "";
             for (read_pos = 0; read_pos < s.Length;) {
                 char c = s[read_pos++];
                 if (c == '\\') {
                     var found_ignored = false;
                     foreach (var ig in ignored_escapes) {
                         if (match(s, read_pos, ig)) {
-                            // TODO same as OD
+                            new_s += '\\';
+                            new_s += ig;
                             read_pos += ig.Length;
                             found_ignored = true;
                             break;
@@ -108,51 +108,48 @@ namespace ClopenDream {
                     if (found_ignored) { continue; }
                     char c2 = s[read_pos++];
                     // TODO b here is a bug in the \black escape
-                    if (c2 == 'a' || c2 == 'b' || c2 == 'A') {
-                        // TODO same as OD
-                    }
-                    else if (c2 == 's') {
-                        // TODO same as OD
-                    }
-                    else if (c2 == 'n') {
-                        cs[write_pos++] = '\n';
+                    if (c2 == 'n') {
+                        new_s += '\n';
                     }
                     else if (c2 == 't') {
-                        cs[write_pos++] = '\t';
+                        new_s += '\t';
+                    }
+                    else if (c2 == 'b') {
+                        new_s += '\b';
                     }
                     else if (c2 == '\\') {
-                        cs[write_pos++] = '\\';
+                        new_s += '\\';
                     }
                     else if (c2 == '"') {
-                        cs[write_pos++] = '\"';
+                        new_s += '"';
                     }
                     else if (c2 == '\'') {
-                        cs[write_pos++] = '\'';
+                        new_s += '\'';
                     }
                     else if (c2 == '[') {
-                        cs[write_pos++] = '[';
+                        new_s += '[';
                     }
                     else if (c2 == ']') {
-                        cs[write_pos++] = ']';
+                        new_s += ']';
                     }
                     else if (c2 == '<') {
-                        cs[write_pos++] = '<';
+                        new_s += '<';
                     }
                     else if (c2 == '>') {
-                        cs[write_pos++] = '>';
+                        new_s += '>';
                     }
                     else if (c2 == ' ') {
-                        cs[write_pos++] = ' ';
+                        new_s += ' ';
                     }
                     else {
                         throw new Exception("unknown string escape " + s);
                     }
                 }
                 else {
-                    cs[write_pos++] = c;
+                    new_s += c;
                 }
             }
-            return new string(cs.Take<char>(write_pos).ToArray());
+            return new_s;
         }
     }
 }

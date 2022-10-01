@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using DMCompiler.Compiler.DM;
+using OpenDreamShared.Dream;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -268,6 +269,7 @@ namespace ClopenDream {
                 procVarPathStack.Push(node);
                 DMASTExpression expr = new DMASTConstantNull(node.Location);
                 var index_modifier = false;
+                DMASTExpression array_size = null;
                 foreach (var subnode in node.Leaves) {
                     var modnode = subnode.UniqueLeaf();
                     if (modnode == null) {
@@ -279,6 +281,9 @@ namespace ClopenDream {
                     // TODO handle a sized array correctly
                     else if (modnode.Labels.Contains("IndexModifier")) {
                         index_modifier = true;
+                        if (modnode.Leaves.Count > 0) {
+                            array_size = GetExpression(modnode.Leaves[0]);
+                        }
                     }
                     else if (modnode.Labels.Contains("AsModifier")) {
                         // TODO handle this
@@ -291,10 +296,21 @@ namespace ClopenDream {
                     }
 
                 }
-                var path = new DMASTPath(node.Location, ExtractPath(procVarPathStack));
-                if (index_modifier)
-                {
-                    path = new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath($"var/list/{node.Tags["bare"]}") );
+                var dpath = ExtractPath(procVarPathStack);
+                dpath.Type = DreamPath.PathType.Relative;
+                while (dpath.FindElement("var") == 0) {
+                    dpath = dpath.RemoveElement(0);
+                }
+                var path = new DMASTPath(node.Location, new DreamPath($"var").Combine(dpath));
+                if (index_modifier) {
+                    if (dpath.FindElement("list") == -1) {
+                        path = new DMASTPath(node.Location, new DreamPath($"var/list").Combine(dpath));
+                    }
+                    if (array_size != null) {
+                        var paras = new DMASTCallParameter[1];
+                        paras[0] = new DMASTCallParameter(node.Location, array_size);
+                        expr = new DMASTNewPath(node.Location, new DMASTPath(node.Location, new OpenDreamShared.Dream.DreamPath("/list")) ,paras);
+                    }
                 }
                 var define = new DMASTProcStatementVarDeclaration(node.Location, path, expr);
                 yield return define;
@@ -417,16 +433,16 @@ namespace ClopenDream {
                         var list_expr = GetExpression(for_expr.Leaves[1]);
                         return (new DMASTProcStatementForList(for_node.Location, initializer, new DMASTIdentifier(for_node.Location, for_name[0]), list_expr, body), cnode);
                     }
-                    else {
+                    else if (for_expr.Tags.ContainsKey("ident")) {
                         var body_node = for_node.Next();
                         DMASTProcBlockInner body = null;
                         if (body_node != null && body_node.Labels.Contains("ForBody")) {
                             cnode += 1;
                             body = GetProcBlockInner(body_node.Leaves);
                         }
-                        var placeholder = new DMASTProcStatementExpression(for_node.Location, new DMASTConstantString(for_node.Location, "This is a ForBody placeholder") );
-                        return (placeholder, cnode);
-                        //return (new DMASTProcStatementFor(for_node.Location, new DMASTProcStatementExpression(for_node.Location, GetExpression(for_expr)), body), cnode); 
+                        var loop_in_world = new DMASTProcStatementForList(for_node.Location, initializer,
+                           new DMASTIdentifier(for_expr.Location, (for_expr.Tags["ident"] as string[])[0]), new DMASTIdentifier(for_node.Location, "world"), body);
+                        return (loop_in_world, cnode);
                     }
                 }
                 throw for_node.Error("invalid for loop");

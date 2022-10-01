@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using OpenDreamShared.Dream;
 using DMCompiler.Compiler.DM;
 
@@ -51,11 +52,23 @@ namespace ClopenDream {
             if ((i & 0x08) == 0x08) {
                 result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Num;
             }
+            if ((i & 0x10) == 0x10) {
+                result |= (int)OpenDreamShared.Dream.Procs.DMValueType.File;
+            }
             if ((i & 0x20) == 0x20) {
                 result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Turf;
             }
             if ((i & 0x80) == 0x80) {
                 result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Null;
+            }
+            if ((i & 0x100) == 0x100) {
+                result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Area;
+            }
+            if ((i & 0x200) == 0x200) {
+                result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Icon;
+            }
+            if ((i & 0x400) == 0x400) {
+                result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Sound;
             }
             if ((i & 0x800) == 0x800) {
                 result |= (int)OpenDreamShared.Dream.Procs.DMValueType.Message;
@@ -77,6 +90,9 @@ namespace ClopenDream {
             return expr;
         }
 
+        int CountFormatArgs(string s) {
+            return Regex.Matches(s, Regex.Escape("[]")).Count;
+        }
         // TODO only one pass is correct
         string FormatText(string s) {
             s = s.Replace("\\ref[]", "ÿ" + (char)0x01);
