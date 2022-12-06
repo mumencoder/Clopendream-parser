@@ -47,6 +47,11 @@ namespace ClopenDream {
 
         //todo add all of them
         public bool FixPathAllowedKeyword(Node node) {
+            if (node.CheckTag("keyword", "do")) {
+                node.Tags.Clear();
+                node.Tags["bare"] = "do";
+                return true;
+            }
             if (node.CheckTag("operator", "step")) {
                 node.Tags.Clear();
                 node.Tags["bare"] = "step";
@@ -59,12 +64,12 @@ namespace ClopenDream {
             }
             if (node.CheckTag("keyword", "switch")) {
                 node.Tags.Clear();
-                node.Tags["bare"] = "throw";
+                node.Tags["bare"] = "switch";
                 return true;
             }
             if (node.CheckTag("keyword", "spawn")) {
                 node.Tags.Clear();
-                node.Tags["bare"] = "throw";
+                node.Tags["bare"] = "spawn";
                 return true;
             }
             return false;
