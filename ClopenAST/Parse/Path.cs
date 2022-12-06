@@ -65,8 +65,12 @@ namespace ClopenDream {
                 return ("expr", ".");
             }
             string[] deref = ExpressionDereference();
-            if (deref != null) {
+            if (deref != null && _cText[_cPos] == ')') {
                 return ("deref", deref);
+            }
+            string[] path = ExpressionPath(0);
+            if (path != null && _cText[_cPos] == ')') {
+                return ("path", path);
             }
             throw new Exception();
         }
