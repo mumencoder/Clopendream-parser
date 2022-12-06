@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClopenDreamCommandLine", "ClopenDreamCommandLine\ClopenDreamCommandLine.csproj", "{6E547D68-B3CB-4814-BA58-5D4564F99415}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClopenDream", "ClopenAST\ClopenDream.csproj", "{3DA8406B-B43B-4084-95AC-1EEA0BF706D7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DMCompiler", "OpenDream\DMCompiler\DMCompiler.csproj", "{78649FB2-E670-4050-8170-12DA7740A0EA}"
