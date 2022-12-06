@@ -17,6 +17,10 @@ namespace ClopenDream {
             if (_cText.StartsWith("loading")) {
                 return _cText;
             }
+            if (_cText.StartsWith("error: ")) {
+                byond_errors.Add(new ByondCompileError(_cText));
+                return _cText;
+            }
             var colon1 = _cText.IndexOf(':');
             if (colon1 != -1) {
                 var colon2 = _cText.IndexOf(':', colon1 + 1);
