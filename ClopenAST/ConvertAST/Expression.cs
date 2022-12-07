@@ -66,7 +66,7 @@ namespace ClopenDream {
             }
             if (node.Labels.Contains("PathConstant")) {
                 if (node.Leaves.Count > 0) {
-                    Console.WriteLine($"{node.Location}: warning: modified types");
+                    errors.Add( $"{node.Location}: warning: modified types");
                 }
                 return ConvertPath(node);
             }
@@ -87,7 +87,7 @@ namespace ClopenDream {
                 }
                 else if (node.Leaves[0].Labels.Contains("PathConstant")) {
                     if (node.Leaves[0].Leaves.Count > 0) {
-                        Console.WriteLine($"{node.Location}: warning: modified types");
+                        errors.Add($"{node.Location}: warning: modified types");
                     }
                     var path = new DMASTPath(node.Location, FlattenPath(node.Leaves[0]));
                     if (node.Leaves.Count == 1) {
@@ -172,7 +172,7 @@ namespace ClopenDream {
             }
             if (node.Labels.Contains("BuiltinExpression")) {
                 if (node.Tags.ContainsKey("special")) {
-                    Console.WriteLine("warning: global vars");
+                    errors.Add("warning: global vars");
                     return new DMASTConstantNull(node.Location);
                 }
                 string proc_ident = (string)node.Tags["bare"];

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using OpenDreamShared.Dream;
+﻿using OpenDreamShared.Dream;
 using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
@@ -15,6 +11,8 @@ namespace ClopenDream {
 
         public Dictionary<Node, DMASTNode> closed_to_clopen_node = new();
         public Dictionary<DMASTNode, Node> clopen_to_closed_node = new();
+
+        public List<string> errors = new();
 
         void AssociateNodes(Node n, DMASTNode node) {
             closed_to_clopen_node[n] = node;

@@ -93,7 +93,6 @@ namespace ClopenDream {
             if (node.Leaves.Count == 0) {
                 return null;
             }
-            Console.WriteLine( node.PrintLeaves(1) );
             throw node.Error("unknown inner");
         }
 

@@ -60,11 +60,11 @@ namespace ClopenDream {
                     cNode = ReadNode();
                 }
                 catch (Exception) {
-                    Console.WriteLine("Exception at line: " + _cLineNumber + " |" + _cText);
+                    byond_errors.Add( new ByondCompileError("Exception at line: " + _cLineNumber + " |" + _cText) );
                     throw;
                 }
                 if (cNode == null) {
-                    Console.WriteLine("unknown node type " + _cLineNumber + " |" + _cText);
+                    byond_errors.Add( new ByondCompileError("unknown node type " + _cLineNumber + " |" + _cText) );
                     return null;
                 }
 
@@ -73,7 +73,7 @@ namespace ClopenDream {
                 var lpos = _cPos;
                 Location? l = ReadLocation();
                 if (l == null) {
-                    Console.WriteLine("bad location " + _cLineNumber + " |" + _cText.Substring(lpos));
+                    byond_errors.Add(new ByondCompileError("bad location " + _cLineNumber + " |" + _cText.Substring(lpos)));
                 }
                 else {
                     cNode.Location = l.Value;

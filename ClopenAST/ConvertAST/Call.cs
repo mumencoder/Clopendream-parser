@@ -30,10 +30,6 @@ namespace ClopenDream {
             if (nodes.Count == 0) {
                 return new DMASTCallParameter[0];
             }
-            //foreach (var node in nodes) {
-            //    Console.WriteLine("callp");
-            //    Console.WriteLine( node.PrintLeaves(10) );
-            //}
             var param_nodes = MatchArgListList(nodes[0]);
             if (param_nodes == null) {
                 param_nodes = nodes;

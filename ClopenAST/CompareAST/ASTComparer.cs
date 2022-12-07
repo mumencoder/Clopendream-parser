@@ -55,6 +55,9 @@ namespace ClopenDream {
         DMAST.ASTHasher AstHash1;
         DMAST.ASTHasher AstHash2;
 
+        List<DMASTNode> missing = new();
+        List<DMASTNode> mismatch = new();
+
         public ASTComparer(DMASTNode ast1, DMASTNode ast2) {
             Ast1 = ast1 as DMASTFile;
             Ast2 = ast2 as DMASTFile;
@@ -70,7 +73,7 @@ namespace ClopenDream {
         public void DefineComparer(DMASTNode node1) {
             var nodes2 = AstHash2.GetNode(node1);
             if (nodes2 == null) {
-                Console.WriteLine($"{node1.Location}: missing {DMAST.ASTHasher.Hash(node1 as dynamic)}");
+                missing.Add(node1);
                 return;
             }
             var found_match = false;
@@ -84,7 +87,7 @@ namespace ClopenDream {
                 compares.Add(compare);
             }
             if (found_match == false) {
-                Console.WriteLine($"{node1.Location}: mismatch {DMAST.ASTHasher.Hash(node1 as dynamic)}");
+                mismatch.Add(node1);
                 MismatchEvent(compares);
             }
         }

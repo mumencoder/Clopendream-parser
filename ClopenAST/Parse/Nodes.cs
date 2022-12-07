@@ -34,6 +34,8 @@ namespace ClopenDream {
         public Dictionary<string, object> T { get; set; } = new();
         public List<Node> N { get; set; } = new();
 
+        List<string> errors;
+
         public void Connect() {
             foreach (var leaf in Leaves) {
                 leaf.Trunk = this;
@@ -69,7 +71,7 @@ namespace ClopenDream {
             seen.Add(this);
             foreach (var leaf in Leaves) {
                 if (seen.Contains(leaf)) {
-                    Console.WriteLine("cycle detected");
+                    errors.Add("cycle detected");
                 } else {
                     leaf.Cycle(seen);
                 }
@@ -159,13 +161,14 @@ namespace ClopenDream {
         }
 
         public Exception Error(string s) {
-            Console.WriteLine("----Error----");
-            Console.WriteLine(Text);
-            Console.WriteLine(PrintLeaves(5));
+            var sr = new StringWriter();
+            sr.WriteLine("----Error----");
+            sr.WriteLine(Text);
+            sr.WriteLine(PrintLeaves(5));
             if (Labels.Count > 0) {
-                Console.WriteLine(RawLine + Labels.Aggregate((s1, s2) => s1 + " " + s2));
+                sr.WriteLine(RawLine + Labels.Aggregate((s1, s2) => s1 + " " + s2));
             }
-            Console.WriteLine(s);
+            sr.WriteLine(s);
             return new Exception();
         }
 

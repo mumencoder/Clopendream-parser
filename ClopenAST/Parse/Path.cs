@@ -4,7 +4,6 @@ namespace ClopenDream {
     public partial class Parser {
         public string[] ExpressionDereference() {
             List<string> segments = new();
-            //Console.WriteLine("?" + _cText + "|||" + getc());
             do {
                 if (!is_deref_start(getc())) {
                     if (segments.Count == 0) { return null; }

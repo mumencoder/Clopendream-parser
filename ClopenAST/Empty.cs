@@ -38,8 +38,7 @@ namespace ClopenDream {
         void CheckFixVisit(Node n) {
             string h = n.GetHash();
             if (empty_nodes.Contains(h)) {
-                Console.WriteLine(n.PrintLeaves(1));
-                throw new Exception();
+                throw new Exception(n.PrintLeaves(1));
             }
         }
     }

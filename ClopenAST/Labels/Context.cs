@@ -24,6 +24,7 @@ namespace ClopenDream {
             }
         }
 
+        List<string> errors = new();
         Stack<Node> _debugStack = new();
 
         //TODO does optional get used?
@@ -87,10 +88,12 @@ namespace ClopenDream {
         }
 
         public bool Error() {
+            StringWriter sw = new StringWriter();
             foreach (var s in lookback) {
-                Console.WriteLine(s);
+                sw.WriteLine(s);
             }
-            Console.WriteLine(_debugStack.Pop().PrintLeaves(3));
+            sw.WriteLine(_debugStack.Pop().PrintLeaves(3));
+            errors.Add(sw.ToString());
             throw new LabelException(this, _debugStack.Pop());
         }
     }
