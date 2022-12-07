@@ -14,6 +14,8 @@ namespace ClopenDream {
         private TextReader _input;
         private Stack<Node> _node_stack = new();
 
+        public List<ByondCompileError> byond_errors = new();
+
         private bool eol(int n = 0) {
             return !(_cPos + n < _cText.Length);
         }

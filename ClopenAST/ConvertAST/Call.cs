@@ -11,21 +11,22 @@ namespace ClopenDream {
                 node = node.Leaves[0];
             }
             DMASTExpression expr = null;
+            DMASTExpression key = null;
             string name = null;
             if (node.Labels.Contains("ListAssign")) {
                 if (node.Leaves[0].Tags.ContainsKey("string")) {
-                    name = (string)node.Leaves[0].Tags["string"];
+                    key = new DMASTConstantString( node.Location, (string)node.Leaves[0].Tags["string"]);
                     expr = GetExpression(node.Leaves[1]);
                 }
                 else {
-                    expr = new DMASTAssign(node.Location, GetExpression(node.Leaves[0]), GetExpression(node.Leaves[1]));
+                    key = GetExpression(node.Leaves[0]);
+                    expr = GetExpression(node.Leaves[1]);
                 }
-            }
-            else {
+                return new DMASTCallParameter(node.Location, expr);
+            } else {
                 expr = GetExpression(node);
+                return new DMASTCallParameter(node.Location, expr);
             }
-            // note names can be escaped?
-            return new DMASTCallParameter(node.Location, expr, EscapeString(name));
         }
 
         DMASTCallParameter[] GetCallParameters(List<Node> nodes) {

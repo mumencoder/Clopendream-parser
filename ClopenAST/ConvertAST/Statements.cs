@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using DMCompiler.Compiler.DM;
 using OpenDreamShared.Dream;
+using OpenDreamShared.Dream.Procs;
 
 namespace ClopenDream {
     public partial class ConvertAST {
@@ -355,118 +356,128 @@ namespace ClopenDream {
             }
             return (null, 0);
         }
+
         (DMASTProcStatement, int) ForLoop(List<Node> nodes, int cnode, DMASTProcStatementVarDeclaration initializer = null, string decl_name = null) {
-            if (cnode >= nodes.Count) {
-                return (null, 0);
-            }
-            var for_node = nodes[cnode];
-            if (for_node.Labels.Contains("ForStmt")) {
-                cnode += 1;
-                if (for_node.Leaves.Count == 0) {
+            return (new DMASTProcStatementFor(nodes[0].Location, null, null, null, DMValueType.Anything, null), cnode);
+        }
+
+        /*
+        (DMASTProcStatement, int) ForLoop(List<Node> nodes, int cnode, DMASTProcStatementVarDeclaration initializer = null, string decl_name = null) {
+                if (cnode >= nodes.Count) {
+                    return (null, 0);
+                }
+                var for_node = nodes[cnode];
+                if (for_node.Labels.Contains("ForStmt")) {
                     cnode += 1;
-                    return (new DMASTProcStatementExpression(for_node.Location, new DMASTConstantString(for_node.Location, "This is a ForBody placeholder")), cnode);
-                }
-                if (for_node.Leaves.Count > 1) {
-                    DMASTProcStatement init = null;
-                    DMASTExpression compa = null;
-                    DMASTExpression incr = null;
-                    init = GetProcStatements(for_node.Leaves).ToList()[0];
-                    compa = GetExpression(for_node.Leaves[1]);
-                    if (for_node.Leaves.Count > 2) {
-                        incr = GetExpression(for_node.Leaves[2]);
-                    }
-                    var for_body_node = for_node.Next();
-                    DMASTProcBlockInner for_body = null;
-                    init = FixInitializer(initializer, init);
-                    if (for_body_node != null && for_body_node.Labels.Contains("ForBody")) {
+                    if (for_node.Leaves.Count == 0) {
                         cnode += 1;
-                        for_body = GetProcBlockInner(for_body_node.Leaves);
+                        return (new DMASTProcStatementExpression(for_node.Location, new DMASTConstantString(for_node.Location, "This is a ForBody placeholder")), cnode);
                     }
-                    return (new DMASTProcStatementForStandard(for_node.Location, init, compa, incr, for_body), cnode);
-                }
-                if (for_node.Leaves.Count == 1) {
-                    var for_expr = for_node.Leaves[0].IgnoreBlank();
-                    if (for_expr.CheckTag("operator", "in") || for_expr.CheckTag("operator", "=")) {
-                        var for_mod = for_expr.Leaves[0].IgnoreBlank();
-                        string[] for_name;
-                        var dm_type = OpenDreamShared.Dream.Procs.DMValueType.Anything;
-                        if (for_mod.CheckTag("operator", "as")) {
-                            for_name = for_mod.Leaves[0].Tags["ident"] as string[];
-                            dm_type = ConvertDMValueType(for_mod.Leaves[1]);
+                    if (for_node.Leaves.Count > 1) {
+                        DMASTExpression init = null;
+                        DMASTExpression compa = null;
+                        DMASTExpression incr = null;
+                        init = GetProcStatements(for_node.Leaves).ToList()[0];
+                        compa = GetExpression(for_node.Leaves[1]);
+                        if (for_node.Leaves.Count > 2) {
+                            incr = GetExpression(for_node.Leaves[2]);
                         }
-                        else {
-                            for_name = for_mod.Tags["ident"] as string[];
-                        }
-                        if (decl_name != null && for_name[0] != decl_name) {
-                            return (null, 0);
-                        }
-                        var body_node = for_node.Next();
-                        DMASTProcBlockInner body = null;
-                        if (body_node != null && body_node.Labels.Contains("ForBody")) {
+                        var for_body_node = for_node.Next();
+                        DMASTProcBlockInner for_body = null;
+                        init = FixInitializer(initializer, init);
+                        if (for_body_node != null && for_body_node.Labels.Contains("ForBody")) {
                             cnode += 1;
-                            body = GetProcBlockInner(body_node.Leaves);
+                            for_body = GetProcBlockInner(for_body_node.Leaves);
                         }
-                        if (for_expr.Leaves[1].Tags.ContainsKey("blank")) {
-                            var to_expr = for_expr.Leaves[1].IgnoreBlank();
-                            DMASTProcStatement for_init = initializer;
-                            if (to_expr.CheckTag("operator", "to")) {
-                                var range_start = GetExpression(to_expr.Leaves[0]);
-                                var range_end = GetExpression(to_expr.Leaves[1]);
-                                DMASTExpression range_step = new DMASTConstantInteger(for_node.Location, 1);
-                                if (to_expr.Leaves.Count == 3) {
-                                    range_step = GetExpression(to_expr.Leaves[2]);
-                                }
-                                if (for_expr.CheckTag("operator", "=")) {
-                                    if (initializer == null) {
-                                        for_init = new DMASTProcStatementExpression(for_node.Location, new DMASTAssign(for_node.Location, GetExpression(for_expr.Leaves[0]), range_start));
-                                    }
-                                    else {
-                                        initializer.Value = range_start;
-                                        for_init = initializer;
-                                    }
-                                }
-                                return (new DMASTProcStatementForRange(for_node.Location, for_init, new DMASTIdentifier(for_node.Location, for_name[0]),
-                                    range_start, range_end, range_step, body), cnode);
+                        return (new DMASTProcStatementFor(for_node.Location, init, compa, compa, DMValueType.Anything, for_body), cnode);
+                        //return (new DMASTProcStatementForStandard(for_node.Location, init, compa, incr, for_body), cnode);
+                    }
+                    if (for_node.Leaves.Count == 1) {
+                        var for_expr = for_node.Leaves[0].IgnoreBlank();
+                        if (for_expr.CheckTag("operator", "in") || for_expr.CheckTag("operator", "=")) {
+                            var for_mod = for_expr.Leaves[0].IgnoreBlank();
+                            string[] for_name;
+                            var dm_type = OpenDreamShared.Dream.Procs.DMValueType.Anything;
+                            if (for_mod.CheckTag("operator", "as")) {
+                                for_name = for_mod.Leaves[0].Tags["ident"] as string[];
+                                dm_type = ConvertDMValueType(for_mod.Leaves[1]);
                             }
                             else {
-                                return (new DMASTProcStatementForList(for_node.Location, for_init, new DMASTIdentifier(for_node.Location, for_name[0]),
-                                    GetExpression(for_expr.Leaves[1]), body), cnode);
+                                for_name = for_mod.Tags["ident"] as string[];
+                            }
+                            if (decl_name != null && for_name[0] != decl_name) {
+                                return (null, 0);
+                            }
+                            var body_node = for_node.Next();
+                            DMASTProcBlockInner body = null;
+                            if (body_node != null && body_node.Labels.Contains("ForBody")) {
+                                cnode += 1;
+                                body = GetProcBlockInner(body_node.Leaves);
+                            }
+                            if (for_expr.Leaves[1].Tags.ContainsKey("blank")) {
+                                var to_expr = for_expr.Leaves[1].IgnoreBlank();
+                                DMASTProcStatement for_init = initializer;
+                                if (to_expr.CheckTag("operator", "to")) {
+                                    var range_start = GetExpression(to_expr.Leaves[0]);
+                                    var range_end = GetExpression(to_expr.Leaves[1]);
+                                    DMASTExpression range_step = new DMASTConstantInteger(for_node.Location, 1);
+                                    if (to_expr.Leaves.Count == 3) {
+                                        range_step = GetExpression(to_expr.Leaves[2]);
+                                    }
+                                    if (for_expr.CheckTag("operator", "=")) {
+                                        if (initializer == null) {
+                                            for_init = new DMASTProcStatementExpression(for_node.Location, new DMASTAssign(for_node.Location, GetExpression(for_expr.Leaves[0]), range_start));
+                                        }
+                                        else {
+                                            initializer.Value = range_start;
+                                            for_init = initializer;
+                                        }
+                                    }
+                                    var for_stmt = new DMASTProcStatementFor(for_node.Location, null, null, null, 
+                                        )
+                                    return (new DMASTProcStatementForRange(for_node.Location, for_init, ,
+                                        range_start, range_end, range_step, body), cnode);
+                                }
+                                else {
+                                    return (new DMASTProcStatementForList(for_node.Location, for_init, new DMASTIdentifier(for_node.Location, for_name[0]),
+                                        GetExpression(for_expr.Leaves[1]), body), cnode);
+                                }
+                            }
+                            var list_expr = GetExpression(for_expr.Leaves[1]);
+                            return (new DMASTProcStatementForList(for_node.Location, initializer, new DMASTIdentifier(for_node.Location, for_name[0]), list_expr, body), cnode);
+                        }
+                        else if (for_expr.Tags.ContainsKey("ident")) {
+                            var body_node = for_node.Next();
+                            DMASTProcBlockInner body = null;
+                            if (body_node != null && body_node.Labels.Contains("ForBody")) {
+                                cnode += 1;
+                                body = GetProcBlockInner(body_node.Leaves);
+                            }
+                            var loop_in_world = new DMASTProcStatementForList(for_node.Location, initializer,
+                               new DMASTIdentifier(for_expr.Location, (for_expr.Tags["ident"] as string[])[0]), new DMASTIdentifier(for_node.Location, "world"), body);
+                            return (loop_in_world, cnode);
+                        }
+                    }
+                    throw for_node.Error("invalid for loop");
+                }
+                return (null, 0);
+            }
+            DMASTProcStatement FixInitializer(DMASTProcStatementVarDeclaration initializer, DMASTProcStatement init) {
+                if (initializer == null) {
+                    return init;
+                }
+                if (init is DMASTProcStatementExpression expr) {
+                    if (expr.Expression is DMASTAssign nassign) {
+                        if (nassign.Expression is DMASTIdentifier id) {
+                            if (initializer.Name == id.Identifier) {
+                                initializer.Value = nassign.Value;
+                                return initializer;
                             }
                         }
-                        var list_expr = GetExpression(for_expr.Leaves[1]);
-                        return (new DMASTProcStatementForList(for_node.Location, initializer, new DMASTIdentifier(for_node.Location, for_name[0]), list_expr, body), cnode);
-                    }
-                    else if (for_expr.Tags.ContainsKey("ident")) {
-                        var body_node = for_node.Next();
-                        DMASTProcBlockInner body = null;
-                        if (body_node != null && body_node.Labels.Contains("ForBody")) {
-                            cnode += 1;
-                            body = GetProcBlockInner(body_node.Leaves);
-                        }
-                        var loop_in_world = new DMASTProcStatementForList(for_node.Location, initializer,
-                           new DMASTIdentifier(for_expr.Location, (for_expr.Tags["ident"] as string[])[0]), new DMASTIdentifier(for_node.Location, "world"), body);
-                        return (loop_in_world, cnode);
                     }
                 }
-                throw for_node.Error("invalid for loop");
-            }
-            return (null, 0);
-        }
-        DMASTProcStatement FixInitializer(DMASTProcStatementVarDeclaration initializer, DMASTProcStatement init) {
-            if (initializer == null) {
                 return init;
             }
-            if (init is DMASTProcStatementExpression expr) {
-                if (expr.Expression is DMASTAssign nassign) {
-                    if (nassign.Expression is DMASTIdentifier id) {
-                        if (initializer.Name == id.Identifier) {
-                            initializer.Value = nassign.Value;
-                            return initializer;
-                        }
-                    }
-                }
-            }
-            return init;
+            */
         }
     }
-}

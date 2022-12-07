@@ -1,14 +1,15 @@
 ﻿
 using System;
+using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Dream.Procs;
 using DMCompiler.Compiler;
 using DMCompiler.Compiler.DM;
+using System.Dynamic;
 
 namespace ClopenDream {
-
     public class ASTCompare {
         public List<Result> Results = new();
         public DMAST.Labeler Labeler = new();
@@ -224,6 +225,57 @@ namespace ClopenDream {
             }
 
             return true;
+        }
+
+        static dynamic json_output = new ExpandoObject();
+
+        static int mismatch_count = 0;
+        static List<string> mismatch_output = new();
+
+        static void CompareAST(DMASTFile ast1, DMASTFile ast2) {
+            ASTComparer comparer = new ASTComparer(ast1, ast2);
+            comparer.MismatchEvent = (_) => ProcessMismatchResult("", _);
+            comparer.CompareAll();
+            json_output.mismatch_count = mismatch_count;
+            json_output.mismatch_output = mismatch_output;
+        }
+
+        static void ProcessMismatchResult(string mismatch_dir, List<ASTCompare> compares) {
+            if (mismatch_count > 1000) {
+                throw new Exception();
+            }
+            mismatch_count++;
+
+            int mismatch_id = 0;
+            foreach (var compare in compares) {
+                mismatch_id += 1;
+                var path = "mismatch-" + DMAST.ASTHasher.Hash((dynamic)compare.nl) as string;
+                path = path.Replace("/", "@");
+                mismatch_output.Add(path);
+                var dir_path = Path.Combine(mismatch_dir, path);
+                Directory.CreateDirectory(dir_path);
+                DMAST.DMASTNodePrinter printer = new();
+                var f1 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_clopen.txt"));
+                printer.Print(compare.nl, f1, labeler: compare.Labeler);
+                f1.Close();
+                var f2 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-ast_open.txt"));
+                printer.Print(compare.nr, f2, labeler: compare.Labeler);
+                f2.WriteLine("---------------");
+                f2.Close();
+
+                var f3 = File.CreateText(Path.Combine(dir_path, $"{mismatch_id}-compares.txt"));
+                foreach (var result in compare.Results) {
+                    f3.WriteLine("=============");
+                    f3.WriteLine(result.ResultType);
+                    f3.WriteLine("-------------" + result.A?.GetType());
+                    printer.Print(result.A, f3, max_depth: 1, labeler: compare.Labeler);
+                    f3.WriteLine();
+                    f3.WriteLine("-------------" + result.B?.GetType());
+                    printer.Print(result.B, f3, max_depth: 1, labeler: compare.Labeler);
+                    f3.WriteLine();
+                }
+                f3.Close();
+            }
         }
     }
 }

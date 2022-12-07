@@ -28,7 +28,8 @@ namespace ClopenDream {
                             return _cText;
                         }
                         if (warn == "error") {
-                            throw new ByondCompileError(_cText);
+                            byond_errors.Add( new ByondCompileError(_cText) );
+                            return _cText;
                         }
                     }
                 }
