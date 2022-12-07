@@ -16,27 +16,27 @@ namespace ClopenDream {
 
     public partial class ClopenDream {
 
-        public static ExpandoObject PrepareAST(TextReader codetree, Node empty_root) {
-            dynamic result = new ExpandoObject();
+        public static Dictionary<string,Object> PrepareAST(TextReader codetree, Node empty_root) {
+            Dictionary<string,Object> result = new();
 
             Parser p = new();
             Node root = null;
             try {
                 root = p.BeginParse(codetree);
             } catch (Exception e) {
-                result.parse_exc = e;
+                result["parse_exc"] = e;
             }
             root.FixLabels();
             new FixEmpty(empty_root, root).Begin();
 
-            result.parser = p;
-            result.root_node = root;
+            result["parser"] = p;
+            result["root_node"] = root;
 
             var converter = new ConvertAST();
             try {
-                result.ast_clopen = converter.GetFile(root);
+                result["ast_clopen"] = converter.GetFile(root);
             } catch (Exception e) {
-                result.convert_exc = e;
+                result["convert_exc"] = e;
             }
 
             return result;
