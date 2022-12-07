@@ -16,33 +16,34 @@ namespace ClopenDream {
 
     public partial class ClopenDream {
 
-        public static ExpandoObject PrepareAST(TextWriter output, TextReader codetree, TextReader empty_code_tree, DMCompilerState empty_compile) {
+        public static ExpandoObject PrepareAST(TextReader codetree, Node empty_root) {
             dynamic result = new ExpandoObject();
 
             Parser p = new();
-            DMASTFile ast_clopen = null;
-            Node root = p.BeginParse(codetree);
+            Node root = null;
+            try {
+                root = p.BeginParse(codetree);
+            } catch (Exception e) {
+                result.parse_exc = e;
+            }
             root.FixLabels();
-
-            Node empty_root = p.BeginParse(empty_code_tree);
-            empty_root.FixLabels();
             new FixEmpty(empty_root, root).Begin();
 
-            var converter = new ConvertAST();
+            result.parser = p;
+            result.root_node = root;
 
+            var converter = new ConvertAST();
             try {
-                ast_clopen = converter.GetFile(root);
-                ASTMerge.Merge(empty_compile.ast, ast_clopen);
-            } catch {
-                if (converter.ProcNode != null) {
-                    output.WriteLine(converter.ProcNode.PrintLeaves(3));
-                } else {
-                    output.WriteLine("unknown error");
-                }
+                result.ast_clopen = converter.GetFile(root);
+            } catch (Exception e) {
+                result.convert_exc = e;
             }
-            result.ast_clopen = ast_clopen;
+
             return result;
         }
+
+        //                        output.WriteLine(converter.ProcNode.PrintLeaves(3));
+        //            ASTMerge.Merge(empty_compile.ast, ast_clopen);
 
         public static void SearchAST(ConvertAST converter, string obj_path, string name) {
             converter.VisitDefine = DefineSearch;
