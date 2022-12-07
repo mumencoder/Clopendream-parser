@@ -1,13 +1,7 @@
 ﻿
-using System;
-using System.IO;
-using System.Reflection;
-using System.Collections.Generic;
 using OpenDreamShared.Dream;
 using OpenDreamShared.Dream.Procs;
-using DMCompiler.Compiler;
 using DMCompiler.Compiler.DM;
-using System.Dynamic;
 
 namespace ClopenDream {
     public class ASTCompare {

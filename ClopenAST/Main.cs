@@ -1,16 +1,26 @@
 ﻿
-using System;
-using System.Collections.Generic;
-using System.IO;
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Reflection;
+global using System.Dynamic;
+global using System.Linq;
+global using System.Text.RegularExpressions;
+global using System.Text;
+global using System.Text.Json.Serialization;
+
 using DMCompiler;
 using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
+
     public partial class ClopenDream {
 
-        public static bool PrepareAST(TextWriter output, TextReader codetree, TextReader empty_code_tree, DMCompilerState empty_compile, out DMASTFile ast_clopen) {
+        public static ExpandoObject PrepareAST(TextWriter output, TextReader codetree, TextReader empty_code_tree, DMCompilerState empty_compile) {
+            dynamic result = new ExpandoObject();
+
             Parser p = new();
-            ast_clopen = null;
+            DMASTFile ast_clopen = null;
             Node root = p.BeginParse(codetree);
             root.FixLabels();
 
@@ -29,9 +39,9 @@ namespace ClopenDream {
                 } else {
                     output.WriteLine("unknown error");
                 }
-                return false;
             }
-            return true;
+            result.ast_clopen = ast_clopen;
+            return result;
         }
 
         public static void SearchAST(ConvertAST converter, string obj_path, string name) {

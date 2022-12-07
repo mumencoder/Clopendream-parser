@@ -1,7 +1,4 @@
 ﻿
-using System;
-using System.Collections.Generic;
-using DMCompiler;
 using DMCompiler.Compiler.DM;
 using DMCompiler.DM.Visitors;
 

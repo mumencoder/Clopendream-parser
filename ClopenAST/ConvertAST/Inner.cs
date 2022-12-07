@@ -1,5 +1,4 @@
-﻿using System;
-using OpenDreamShared.Dream;
+﻿using OpenDreamShared.Dream;
 using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {

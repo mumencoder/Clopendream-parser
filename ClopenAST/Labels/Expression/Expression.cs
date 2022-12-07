@@ -1,7 +1,4 @@
 ﻿
-using System;
-using System.Collections.Generic;
-
 namespace ClopenDream {
     public partial class LabelContext {
         bool CheckExpression(Node node) {

@@ -1,6 +1,4 @@
 ﻿
-using System.Linq;
-
 namespace ClopenDream {
     public partial class LabelContext {
         bool CheckNewExpression(Node node) {

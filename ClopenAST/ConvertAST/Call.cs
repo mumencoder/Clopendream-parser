@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DMCompiler.Compiler.DM;
+﻿using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {
     public partial class ConvertAST {

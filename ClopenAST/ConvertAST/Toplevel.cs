@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Collections.Generic;
-using OpenDreamShared.Dream;
+﻿using OpenDreamShared.Dream;
 using DMCompiler.Compiler.DM;
 
 namespace ClopenDream {

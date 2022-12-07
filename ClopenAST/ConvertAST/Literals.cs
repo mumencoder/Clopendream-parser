@@ -1,6 +1,4 @@
 ﻿
-using System;
-using System.Linq;
 using OpenDreamShared.Dream;
 using DMCompiler.Compiler.DM;
 

@@ -1,6 +1,4 @@
 ﻿
-using System;
-
 namespace ClopenDream {
 
     public class ByondCompileError : System.Exception {

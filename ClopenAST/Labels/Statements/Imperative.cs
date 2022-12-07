@@ -1,6 +1,4 @@
 ﻿
-using System;
-
 namespace ClopenDream {
     public partial class LabelContext {
 
