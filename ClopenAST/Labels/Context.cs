@@ -12,6 +12,9 @@ namespace ClopenDream {
 
     public partial class LabelContext {
 
+        public LabelContext(Parser p) { _parser = p; }
+
+        private Parser _parser;
         private int maxLookback = 64;
         private Queue<string> lookback = new();
         public bool IsDebugLine(int line) {
@@ -24,7 +27,6 @@ namespace ClopenDream {
             }
         }
 
-        List<string> errors = new();
         Stack<Node> _debugStack = new();
 
         //TODO does optional get used?
@@ -93,7 +95,7 @@ namespace ClopenDream {
                 sw.WriteLine(s);
             }
             sw.WriteLine(_debugStack.Pop().PrintLeaves(3));
-            errors.Add(sw.ToString());
+            _parser.errors.Add(sw.ToString());
             throw new LabelException(this, _debugStack.Pop());
         }
     }

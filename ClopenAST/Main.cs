@@ -33,8 +33,9 @@ namespace ClopenDream {
             result["root_node"] = root;
 
             var converter = new ConvertAST();
+            result["converter"] = converter;
             try {
-                result["ast_clopen"] = converter.GetFile(root);
+                result["ast"] = converter.GetFile(root);
             } catch (Exception e) {
                 result["convert_exc"] = e;
             }
