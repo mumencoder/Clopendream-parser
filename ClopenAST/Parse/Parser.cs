@@ -12,6 +12,7 @@ namespace ClopenDream {
         private Stack<Node> _node_stack = new();
 
         public List<ByondCompileError> byond_errors = new();
+        public List<string> errors;
 
         private bool eol(int n = 0) {
             return !(_cPos + n < _cText.Length);
@@ -60,11 +61,11 @@ namespace ClopenDream {
                     cNode = ReadNode();
                 }
                 catch (Exception) {
-                    byond_errors.Add( new ByondCompileError("Exception at line: " + _cLineNumber + " |" + _cText) );
+                    errors.Add( "Exception at line:" + _cLineNumber + ":" + _cText);
                     throw;
                 }
                 if (cNode == null) {
-                    byond_errors.Add( new ByondCompileError("unknown node type " + _cLineNumber + " |" + _cText) );
+                    errors.Add( "unknown node type:" + _cLineNumber + ":" + _cText);
                     return null;
                 }
 
@@ -73,7 +74,7 @@ namespace ClopenDream {
                 var lpos = _cPos;
                 Location? l = ReadLocation();
                 if (l == null) {
-                    byond_errors.Add(new ByondCompileError("bad location " + _cLineNumber + " |" + _cText.Substring(lpos)));
+                    errors.Add("bad location:" + _cLineNumber + ":" + _cText.Substring(lpos));
                 }
                 else {
                     cNode.Location = l.Value;

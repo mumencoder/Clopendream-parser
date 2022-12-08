@@ -15,7 +15,7 @@ namespace ClopenDream {
             if (_cText.StartsWith("loading")) {
                 return _cText;
             }
-            if (_cText.StartsWith("error: ")) {
+            if (_cText.StartsWith("error:")) {
                 byond_errors.Add(new ByondCompileError(_cText));
                 return _cText;
             }
