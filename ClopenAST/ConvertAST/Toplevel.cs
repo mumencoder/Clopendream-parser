@@ -172,6 +172,9 @@ namespace ClopenDream {
                     else if (modnode.Labels.Contains("AsModifier")) {
                         val_type = ConvertDMValueType(modnode.Leaves[0]);
                     }
+                    else if (modnode.Labels.Contains("InModifier")) {
+                        // TODO: this might be ignored
+                    }
                     else {
                         throw node.Error("Unknown object var declaration modifier");
                     }
