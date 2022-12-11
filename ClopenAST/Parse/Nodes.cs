@@ -149,12 +149,14 @@ namespace ClopenDream {
                     sb.Append(k + " ");
                 }
             }
+            sb.Append(" ||| ");
             if (Labels.Count > 0) {
-                sb.Append(" ||| ");
                 foreach (var l in Labels) {
                     sb.Append(l + " ");
                 }
             }
+            sb.Append(" ||| ");
+            sb.Append(Location.ToString());
             return sb.ToString();
         }
 
