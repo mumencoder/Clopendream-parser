@@ -23,11 +23,11 @@ namespace ClopenDream {
             Node root = null;
             try {
                 root = p.BeginParse(codetree);
+                root.FixLabels();
+                new FixEmpty(empty_root, root).Begin();
             } catch (Exception e) {
                 result["parse_exc"] = e;
             }
-            root.FixLabels();
-            new FixEmpty(empty_root, root).Begin();
 
             result["parser"] = p;
             result["root_node"] = root;
