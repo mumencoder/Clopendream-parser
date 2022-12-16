@@ -3,6 +3,7 @@ namespace ClopenDream {
 
     public partial class LabelContext {
         bool CheckProc(Node node) {
+            FixPathAllowedKeyword(node);
             if (!Parse(CheckProcHeader, node.Leaves[0])) { Error(); }
             if (!ParseStatements(CheckStatement, node.Leaves.Skip(1).TakeWhile((node) => true).ToList())) { Error(); }
             return true;
