@@ -45,19 +45,39 @@ namespace ClopenDream {
 
         //todo add all of them
         public bool FixPathAllowedKeyword(Node node) {
-            if (node.CheckTag("keyword", "do")) {
+            if (node.CheckTag("operator", "in")) {
                 node.Tags.Clear();
-                node.Tags["bare"] = "do";
+                node.Tags["bare"] = "in";
+                return true;
+            }
+            if (node.CheckTag("operator", "to")) {
+                node.Tags.Clear();
+                node.Tags["bare"] = "to";
                 return true;
             }
             if (node.CheckTag("operator", "step")) {
                 node.Tags.Clear();
                 node.Tags["bare"] = "step";
-                return true; 
+                return true;
+            }
+            if (node.CheckTag("keyword", "if")) {
+                node.Tags.Clear();
+                node.Tags["bare"] = "if";
+                return true;
+            }
+            if (node.CheckTag("keyword", "do")) {
+                node.Tags.Clear();
+                node.Tags["bare"] = "do";
+                return true;
             }
             if (node.CheckTag("keyword", "throw")) {
                 node.Tags.Clear();
                 node.Tags["bare"] = "throw";
+                return true;
+            }
+            if (node.CheckTag("keyword", "try")) {
+                node.Tags.Clear();
+                node.Tags["bare"] = "try";
                 return true;
             }
             if (node.CheckTag("keyword", "switch")) {
@@ -70,6 +90,7 @@ namespace ClopenDream {
                 node.Tags["bare"] = "spawn";
                 return true;
             }
+            if (!node.Tags.ContainsKey("bare") && !node.Tags.ContainsKey("operator")) { Error(); }
             return false;
         }
     }

@@ -3,13 +3,16 @@ namespace ClopenDream{
 
     public partial class LabelContext {
         public bool CheckTopLevel(Node node) {
+            //Console.WriteLine( node.PrintLeaves(64) );
             foreach (var leaf in node.Leaves) {
+                FixKeywordUsage(leaf);
                 if (Parse(CheckProcDecl, leaf)) { continue; }
                 if (Parse(CheckProcOverride, leaf)) { continue; }
                 if (Parse(CheckObjectVarDecl, leaf)) { continue; }
                 if (Parse(CheckObjectDecl, leaf)) { continue; }
                 return Error();
             }
+            //Console.WriteLine(node.PrintLeaves(64));
             return true;
         }
 
@@ -35,8 +38,8 @@ namespace ClopenDream{
             return true;
         }
         bool CheckObjectDecl(Node node) {
-            FixKeywordUsage(node);
             foreach (var leaf in node.Leaves) {
+                FixKeywordUsage(leaf);
                 if (Parse(CheckProcDecl, leaf)) { continue; }
                 if (Parse(CheckProcOverride, leaf)) { continue; }
                 if (Parse(CheckObjectVarDecl, leaf)) { continue; }
@@ -53,6 +56,18 @@ namespace ClopenDream{
             if (node.Tags.ContainsKey("keyword")) {
                 node.Tags["bare"] = node.Tags["keyword"];
                 node.Tags.Remove("keyword");
+            }
+            if (node.CheckTag("operator", "in")) {
+                throw node.Error("Bad proc 'in'");
+            }
+            if (node.CheckTag("operator", "as")) {
+                throw node.Error("Bad proc 'as'");
+            }
+            if (node.CheckTag("operator", "to")) {
+                throw node.Error("Bad proc 'to'");
+            }
+            if (node.CheckTag("operator", "step")) {
+                throw node.Error("Bad proc 'step'");
             }
         }
     }
