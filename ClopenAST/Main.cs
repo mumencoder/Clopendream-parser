@@ -16,14 +16,17 @@ namespace ClopenDream {
 
     public partial class ClopenDream {
 
-        public static Dictionary<string,Object> PrepareAST(TextReader codetree, Node empty_root) {
+        public static Dictionary<string,Object> PrepareAST(TextReader codetree, Node empty_root, bool verbose=false) {
             Dictionary<string,Object> result = new();
 
             Parser p = new();
             Node root = null;
             try {
+                if (verbose) { Console.WriteLine("PrepareAST::BeginParse"); }
                 root = p.BeginParse(codetree);
+                if (verbose) { Console.WriteLine("Parser::FixLabels"); }
                 root.FixLabels();
+                if (verbose) { Console.WriteLine("FixEmpty::Begin"); }
                 new FixEmpty(empty_root, root).Begin();
             } catch (Exception e) {
                 result["parse_exc"] = e;
@@ -32,9 +35,10 @@ namespace ClopenDream {
             result["parser"] = p;
             result["root_node"] = root;
 
-            var converter = new ConvertAST();
+            var converter = new ConvertAST(verbose: verbose);
             result["converter"] = converter;
             try {
+                if (verbose) { Console.WriteLine("ConvertAST::GetFile"); }
                 result["ast"] = converter.GetFile(root);
             } catch (Exception e) {
                 result["convert_exc"] = e;

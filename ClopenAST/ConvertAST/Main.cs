@@ -13,7 +13,10 @@ namespace ClopenDream {
         public Dictionary<DMASTNode, Node> clopen_to_closed_node = new();
 
         public List<string> errors = new();
+        private bool _verbose = false;
 
+        public ConvertAST(bool verbose=false) { _verbose = verbose; }
+        
         void AssociateNodes(Node n, DMASTNode node) {
             closed_to_clopen_node[n] = node;
             clopen_to_closed_node[node] = n;

@@ -14,6 +14,7 @@ namespace ClopenDream {
         DMASTBlockInner GetBlockInner(List<Node> nodes) {
             List<DMASTStatement> stmts = new();
             foreach (var leaf in nodes) {
+                if (_verbose) { Console.WriteLine($"GetBlockInner {leaf.Print()}"); }
                 stmts.AddRange(GetStatements(leaf));
             }
             return new DMASTBlockInner(nodes.Count > 0 ? nodes[0].Location : OpenDreamShared.Compiler.Location.Unknown, stmts.ToArray());

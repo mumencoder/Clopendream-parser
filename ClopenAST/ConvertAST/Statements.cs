@@ -8,6 +8,7 @@ namespace ClopenDream {
             int cnode = 0;
             while (cnode < nodes.Count) {
                 var node = nodes[cnode];
+                if (_verbose) { Console.WriteLine($"GetProcStatements {cnode} {node.Print()}"); }
 
                 if (node.Labels.Contains("IfStmt")) {
                     cnode += 1;
@@ -356,7 +357,7 @@ namespace ClopenDream {
         }
 
         (DMASTProcStatement, int) ForLoop(List<Node> nodes, int cnode, DMASTProcStatementVarDeclaration initializer = null, string decl_name = null) {
-            return (new DMASTProcStatementFor(nodes[0].Location, null, null, null, DMValueType.Anything, null), cnode);
+            return (new DMASTProcStatementFor(nodes[0].Location, null, null, null, DMValueType.Anything, null), cnode+1);
         }
 
         /*
