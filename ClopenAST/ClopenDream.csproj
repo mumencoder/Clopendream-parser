@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	  <OutputType>Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ApplicationIcon />
     <StartupObject />
   </PropertyGroup>
@@ -10,6 +10,10 @@
   <ItemGroup>
     <ProjectReference Include="..\OpenDream\DMCompiler\DMCompiler.csproj" />
     <ProjectReference Include="..\OpenDream\OpenDreamShared\OpenDreamShared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Meta\" />
   </ItemGroup>
 
 </Project>
