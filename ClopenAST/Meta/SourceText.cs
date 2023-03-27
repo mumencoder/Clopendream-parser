@@ -11,6 +11,9 @@ namespace ClopenDream {
 
         public int Length { get { return Text.Length; } }
 
+        public SourceText(char[] text) {
+            Text = text;
+        }
         public SourceText(string include_base_dir, string include_path) {
             IncludeBaseDir = include_base_dir;
             IncludePath = include_path.Replace('\\', Path.DirectorySeparatorChar);

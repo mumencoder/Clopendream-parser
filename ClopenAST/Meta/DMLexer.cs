@@ -1,10 +1,5 @@
 ﻿
 namespace ClopenDream {
-
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-
     public class DMLexer {
         CombinedSource _tp;
         SourceLocation start_location;
@@ -14,36 +9,9 @@ namespace ClopenDream {
             _tp = new CombinedSource();
             start_location = _tp.CurrentLocation();
         }
-        public void Include(SourceText srctext) {
-            _tp.Include(srctext);
-        }
-        public void SavePosition() {
-            _tp.SavePosition();
-        }
-        public void RestorePosition() {
-            _tp.RestorePosition();
-        }
-        public void AcceptPosition() {
-            _tp.AcceptPosition();
-        }
 
-        public bool CheckText(DMToken token, DMToken.Kind ty, string s) {
-            if (token.K == ty && token.Text == s) {
-                return true;
-            }
-            return false;
-        }
-
-        public string ReadLine() {
-            int start = _tp.CurrentPosition();
-            while (_tp.Peek(0) != '\n') {
-                _tp.Advance(1);
-            }
-            if (_tp.CurrentPosition() == start) { return ""; }
-            return _tp.GetString(start, _tp.CurrentPosition() - 1);
-        }
-
-        public void CreateToken(DMToken.Kind ty, object value) {
+        // Token queue output
+        public void CreateToken(DMToken.Kind ty, object value = null) {
             pending_tokens.Enqueue(new DMToken(ty, value));
         }
         public void AcceptToken(DMToken.Kind ty, int n) {
@@ -58,179 +26,228 @@ namespace ClopenDream {
             start_location = _tp.CurrentLocation();
             pending_tokens.Enqueue(token);
         }
+        public DMToken NextToken() {
+            while (pending_tokens.Count == 0) {
+                Advance();
+            }
+            return pending_tokens.Dequeue();
+        }
+
+        // Position control
+        public void Include(SourceText srctext) {
+            _tp.Include(srctext);
+        }
+        public void SavePosition() {
+            _tp.SavePosition();
+        }
+        public void RestorePosition() {
+            _tp.RestorePosition();
+        }
+        public void AcceptPosition() {
+            _tp.AcceptPosition();
+        }
+
+        // Matching
+        public static bool IsIdentifierStart(char c) {
+            return (IsAlphabetic(c) || c == '_');
+        }
+        public static bool IsIdentifier(char c) {
+            return (IsAlphabetic(c) || IsNumeric(c) || c == '_');
+        }
+        public static bool IsAlphabetic(char c) {
+            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        }
+
+        public static bool IsNumeric(char c) {
+            return (c >= '0' && c <= '9');
+        }
+
+        public static bool IsAlphanumeric(char c) {
+            return IsAlphabetic(c) || IsNumeric(c);
+        }
+
+        public static bool IsHex(char c) {
+            return IsNumeric(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+        }
+
+        public string ReadLine() {
+            int start = _tp.CurrentPosition();
+            while (_tp.Peek(0) != '\n') {
+                _tp.Advance(1);
+            }
+            if (_tp.CurrentPosition() == start) { return ""; }
+            return _tp.GetString(start, _tp.CurrentPosition() - 1);
+        }
 
         public void Advance() {
-            while (true) {
-                char? c = _tp.Peek(0);
-                switch (c) {
-                    case null: AcceptToken(DMToken.Kind.EndOfFile, 1); break;
-                    case ' ': AcceptToken(DMToken.Kind.Whitespace, 1); break;
-                    case '\t': AcceptToken(DMToken.Kind.Whitespace, 1); break; 
-                    case '\n': AcceptToken(DMToken.Kind.Newline, 1); break;
-                    case '.': ReadDots(); break;
-                    case '[':
-                    case ']':
-                    case ';':
-                    case ':':
-                    case ',':
-                    case '(':
-                    case ')': AcceptToken(DMToken.Kind.Symbol, 1); break;
-                    case '>':
-                        switch (_tp.Peek(1)) {
-                            case '>':
-                                if (_tp.Peek(2) == '=') { AcceptToken(DMToken.Kind.Symbol, 3); } 
-                                else { AcceptToken(DMToken.Kind.Symbol, 2); }
-                                break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '?': 
-                        switch (_tp.Peek(1)) {
-                            case '.': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            case ':': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            case '[': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '<': 
-                        switch (_tp.Peek(1)) {
-                            case '<':
-                                if (_tp.Peek(2) == '=') { AcceptToken(DMToken.Kind.Symbol, 3); } 
-                                else { AcceptToken(DMToken.Kind.Symbol, 2); }
-                                break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '|':
-                        switch (_tp.Peek(1)) {
-                            case '|':
-                                switch (_tp.Peek(2)) {
-                                    case '=': AcceptToken(DMToken.Kind.Symbol, 3); break;
-                                    default: AcceptToken(DMToken.Kind.Symbol, 2); break;
-                                }
-                                break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '*':
-                        switch (_tp.Peek(1)) {
-                            case '*': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '+':
-                        switch (_tp.Peek(1)) {
-                            case '+': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '-':
-                        switch (_tp.Peek(1)) {
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            case '-': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '&':
-                        switch (_tp.Peek(1)) {
-                            case '&': 
-                                switch (_tp.Peek(2)) {
-                                    case '=': AcceptToken(DMToken.Kind.Symbol, 3); break;
-                                    default: AcceptToken(DMToken.Kind.Symbol, 2); break;
-                                }
-                                break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '~':
-                        switch (_tp.Peek(1)) {
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            case '!': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '%':
-                        switch (_tp.Peek(1)) {
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '^':
-                        switch (_tp.Peek(1)) {
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '!': 
-                        switch (_tp.Peek(1)) {
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '=':
-                        switch (_tp.Peek(1)) {
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '\\':
-                        switch (_tp.Peek(1)) {
-                            case '\n': _tp.Advance(2); continue;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '/':
-                        switch (_tp.Peek(1)) {
-                            case '/': SkipSingleComment(); break;
-                            // note: C turns comments into whitespace tokens but this seems to mess with DM's whitespace sensitivity
-                            case '*': SkipMultiComment(); break;
-                            case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    case '@': LexRawString(); break;
-                    case '\'':
-                    case '"':  LexString(false); break;
-                    case '{': 
-                        if (_tp.Peek(1) == '"') {
-                            LexString(true);
-                        } else {
-                            AcceptToken(DMToken.Kind.Symbol, 1);
-                        }
-                        break;
-                    case '}': AcceptToken(DMToken.Kind.Symbol, 1); break;
-                    case '#': 
-                        switch (_tp.Peek(1)) {
-                            case '#': AcceptToken(DMToken.Kind.Symbol, 2); break;
-                            default: AcceptToken(DMToken.Kind.Symbol, 1); break;
-                        }
-                        break;
-                    default: 
-                        char cc = (char)c;
-                        if (Char.IsIdentifierStart(cc)) {
-                            ReadIdentifier();
-                        } else if (Char.IsNumeric(cc)) {
-                            ReadNumeric();
-                        } else {
-                            throw new Exception("Unknown Preprocessing character " + c);
-                        }
-                        break;
-                }
+            char? c = _tp.Peek(0);
+            switch (c) {
+                case null: CreateToken(DMToken.Kind.EndOfFile); break;
+                case ' ': AcceptToken(DMToken.Kind.Whitespace, 1); break;
+                case '\t': AcceptToken(DMToken.Kind.Whitespace, 1); break; 
+                case '\n': AcceptToken(DMToken.Kind.Newline, 1); break;
+                case '.': ReadDots(); break;
+                case '[':
+                case ']':
+                case ';':
+                case ':':
+                case ',':
+                case '(':
+                case ')': AcceptToken(DMToken.Kind.Symbol, 1); break;
+                case '>':
+                    switch (_tp.Peek(1)) {
+                        case '>':
+                            if (_tp.Peek(2) == '=') { AcceptToken(DMToken.Kind.Symbol, 3); } 
+                            else { AcceptToken(DMToken.Kind.Symbol, 2); }
+                            break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '?': 
+                    switch (_tp.Peek(1)) {
+                        case '.': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        case ':': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        case '[': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '<': 
+                    switch (_tp.Peek(1)) {
+                        case '<':
+                            if (_tp.Peek(2) == '=') { AcceptToken(DMToken.Kind.Symbol, 3); } 
+                            else { AcceptToken(DMToken.Kind.Symbol, 2); }
+                            break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '|':
+                    switch (_tp.Peek(1)) {
+                        case '|':
+                            switch (_tp.Peek(2)) {
+                                case '=': AcceptToken(DMToken.Kind.Symbol, 3); break;
+                                default: AcceptToken(DMToken.Kind.Symbol, 2); break;
+                            }
+                            break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '*':
+                    switch (_tp.Peek(1)) {
+                        case '*': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '+':
+                    switch (_tp.Peek(1)) {
+                        case '+': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '-':
+                    switch (_tp.Peek(1)) {
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        case '-': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '&':
+                    switch (_tp.Peek(1)) {
+                        case '&': 
+                            switch (_tp.Peek(2)) {
+                                case '=': AcceptToken(DMToken.Kind.Symbol, 3); break;
+                                default: AcceptToken(DMToken.Kind.Symbol, 2); break;
+                            }
+                            break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '~':
+                    switch (_tp.Peek(1)) {
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        case '!': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '%':
+                    switch (_tp.Peek(1)) {
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '^':
+                    switch (_tp.Peek(1)) {
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '!': 
+                    switch (_tp.Peek(1)) {
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '=':
+                    switch (_tp.Peek(1)) {
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '\\':
+                    switch (_tp.Peek(1)) {
+                        case '\n': AcceptToken(DMToken.Kind.Whitespace, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '/':
+                    switch (_tp.Peek(1)) {
+                        case '/': SkipSingleComment(); break;
+                        // note: C turns comments into whitespace tokens but this seems to mess with DM's whitespace sensitivity
+                        case '*': SkipMultiComment(); break;
+                        case '=': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                case '@': LexRawString(); break;
+                case '\'':
+                case '"':  LexString(false); break;
+                case '{': 
+                    if (_tp.Peek(1) == '"') {
+                        LexString(true);
+                    } else {
+                        AcceptToken(DMToken.Kind.Symbol, 1);
+                    }
+                    break;
+                case '}': AcceptToken(DMToken.Kind.Symbol, 1); break;
+                case '#': 
+                    switch (_tp.Peek(1)) {
+                        case '#': AcceptToken(DMToken.Kind.Symbol, 2); break;
+                        default: AcceptToken(DMToken.Kind.Symbol, 1); break;
+                    }
+                    break;
+                default: 
+                    char cc = (char)c;
+                    if (IsIdentifierStart(cc)) {
+                        ReadIdentifier();
+                    } else if (IsNumeric(cc)) {
+                        ReadNumeric();
+                    } else {
+                        throw new Exception("Unknown Preprocessing character " + c);
+                    }
+                    break;
             }
-            throw new Exception("Advance broke loop");
         }
 
         public void ReadIdentifier() {
             int n = 0;
             while (true) {
                 char? c = _tp.Peek(n);
-                if (c is char cc && Char.IsIdentifier(cc)) {
+                if (c is char cc && IsIdentifier(cc)) {
                     n += 1;
                     continue;
                 }
@@ -265,7 +282,7 @@ namespace ClopenDream {
                         n += 1;
                         continue;
                     }
-                } else if (c is char cc && Char.IsHex(cc) || c == '.' || c == 'p' || c == 'P') {
+                } else if (c is char cc && IsHex(cc) || c == '.' || c == 'p' || c == 'P') {
                     n += 1;
                     continue;
                 } else {

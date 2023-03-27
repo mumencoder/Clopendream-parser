@@ -37,7 +37,12 @@ namespace ClopenDream {
             if (Text != id) { return false; }
             return true;
         }
-
+        public bool CheckText(Kind ty, string s) {
+            if (K == ty && Text == s) {
+                return true;
+            }
+            return false;
+        }
         public static string PrintTokens(IEnumerable<DMToken> tokens) {
             StringBuilder sb = new();
             foreach (var token in tokens) {
